@@ -1,0 +1,12 @@
+*.pth
+*.pt
+*.safetensors
+*.png
+*.jpg
+*.jepg
+*.pyc
+*.cpy
+*.cpython
+__pycache__
+*.npy
+*.npz
