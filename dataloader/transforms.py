@@ -5,7 +5,6 @@ from PIL import Image
 import torchvision.transforms.functional as F
 import random
 
-
 class Compose(object):
     def __init__(self, transforms):
         self.transforms = transforms
@@ -24,15 +23,16 @@ class ToTensor(object):
         right = np.transpose(sample['right_image'], (2, 0, 1))
         sample['right_image'] = torch.from_numpy(right) / 255.
         
-        sample['left_camera_pose'] = torch.from_numpy(sample['left_camera_pose'])
-        sample['right_camera_pose'] = torch.from_numpy(sample['right_camera_pose'])
+        if 'left_camera_pose' in sample.keys():
+            sample['left_camera_pose'] = torch.from_numpy(sample['left_camera_pose'])
+        if 'right_camera_pose' in sample.keys():
+            sample['right_camera_pose'] = torch.from_numpy(sample['right_camera_pose'])
             
         return sample
 
 
 class Normalize(object):
     """Normalize image, with type tensor"""
-
     def __init__(self, mean, std):
         self.mean = mean
         self.std = std
@@ -102,6 +102,7 @@ class RandomCrop(object):
                self.offset_x:self.offset_x + self.img_width]
 
 
+
 class RandomVerticalFlip(object):
     """Randomly vertically filps"""
 
@@ -123,13 +124,11 @@ class ToPILImage(object):
 
 
 class ToNumpyArray(object):
-
     def __call__(self, sample):
         sample['left_image'] = np.array(sample['left_image']).astype(np.float32)
         sample['right_image'] = np.array(sample['right_image']).astype(np.float32)
 
         return sample
-
 
 # Random coloring
 class RandomContrast(object):

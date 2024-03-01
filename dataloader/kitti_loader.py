@@ -8,7 +8,6 @@ import sys
 from dataloader.kitti_io import read_img
 from dataloader.calib_parse import parse_calib
 from dataloader.utils import read_text_lines
-
 import numpy as np
 
 def cut_or_pad_img(img, targetHW):
@@ -37,18 +36,12 @@ def cut_or_pad_img(img, targetHW):
     return img
 
 
-
-
-
-
-
 class KITTIRaw_Dataset(Dataset):
-    
     def __init__(self,datapath,
                  trainlist,vallist,
                  mode='train',
                  transform=None,
-                 targetHW = (370,1232),
+                 targetHW = (364,1248),
                  save_filename=False):
         super(KITTIRaw_Dataset,self).__init__()
         
@@ -107,15 +100,8 @@ class KITTIRaw_Dataset(Dataset):
             sample['left_image'] = cut_or_pad_img(sample['left_image'],targetHW=self.train_resolution)
             sample['right_image'] = cut_or_pad_img(sample['right_image'],targetHW=self.train_resolution)
         
-        
-        sample['left_camera_pose'] = np.array([[1,0,0,0],
-                                              [0,1,0,0],
-                                              [0,0,1,0],
-                                              [0,0,0,1]]).astype(np.float32)
-        sample['right_camera_pose'] = np.array([[1,0,0,-0.537165],
-                                                [0,1,0,0],
-                                                [0,0,1,0],
-                                                [0,0,0,1]]).astype(np.float32)
+        # sample['left_camera_pose'] = np.array([0]).astype(np.float32)
+        # sample['right_camera_pose'] = np.array([-0.537165]).astype(np.float32)
         
     
         if self.transform is not None:
