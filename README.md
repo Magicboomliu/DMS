@@ -11,6 +11,11 @@ Using Stable Diffusion Model for generating multi-baseline images for autonomous
 Descriptions: Simply Fine-Tuned the Unet with prompt of baseline values equals to -0.54, 0, 0.54. Simple concate the reference latent feature with baseline values. Options with Stable Diffusion1.5 and Stable DIffusion2.0.  
 Training Code:  
 ```
-cd scripts\
+cd scripts/train/
 sh train_simple_unet.sh
+```  
+Inference Code:  
+```
+cd scripts/inference/
+sh infer_simple_unet.sh
 ```
