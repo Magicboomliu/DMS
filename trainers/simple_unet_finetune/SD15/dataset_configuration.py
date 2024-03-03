@@ -55,7 +55,7 @@ def prepare_dataset(datapath,
 
 
 
-def resize_max_res_tensor(input_tensor,is_disp=False,recom_resolution=768):
+def resize_max_res_tensor(input_tensor,is_disp=False,recom_resolution=512):
     assert input_tensor.shape[1]==3
     original_H, original_W = input_tensor.shape[2:]
     

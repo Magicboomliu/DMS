@@ -107,6 +107,64 @@ def log_validation_left_source(vae,text_encoder,tokenizer,unet,args,accelerator,
         torch.cuda.empty_cache()
 
 
+def log_validation_right_source(vae,text_encoder,tokenizer,unet,args,accelerator,weight_dtype,scheduler,epoch,
+                   input_image_path="/home/zliu/ACMMM2024/DiffusionMultiBaseline/input_examples/right_images/example3.png",
+                   ):
+    
+    denoise_steps = 32
+    processing_res = 768
+    match_input_res = True
+    batch_size = 1
+    logger.info("Running validation ... ")
+    pipeline = SD20UNet_Simple_Finetune_Pipeline.from_pretrained(pretrained_model_name_or_path=args.pretrained_model_name_or_path,
+                                                   vae=accelerator.unwrap_model(vae),
+                                                   text_encoder=accelerator.unwrap_model(text_encoder),
+                                                   tokenizer=tokenizer,
+                                                   unet = accelerator.unwrap_model(unet),
+                                                   safety_checker=None,
+                                                   scheduler = accelerator.unwrap_model(scheduler))
+
+    pipeline = pipeline.to(accelerator.device)
+    try:
+        pipeline.enable_xformers_memory_efficient_attention()
+    except:
+        pass  
+
+    # -------------------- Inference and saving --------------------
+    with torch.no_grad():
+        
+        input_image_pil_left = Image.open(input_image_path)
+        rendered_right_from_right,rendered_left_from_right,rendered_right_right_from_right = pipeline(input_image_pil_left,
+                                    denosing_steps=denoise_steps,
+                                    processing_res = processing_res,
+                                    match_input_res = match_input_res,
+                                    batch_size = batch_size,
+                                    show_progress_bar = True)
+        
+        
+        rendered_right_from_right = rendered_right_from_right * 255
+        rendered_right_from_right = rendered_right_from_right.astype(np.uint8)
+        
+        rendered_left_from_right = rendered_left_from_right * 255
+        rendered_left_from_right = rendered_left_from_right.astype(np.uint8)
+        
+        rendered_right_right_from_right = rendered_right_right_from_right * 255
+        rendered_right_right_from_right = rendered_right_right_from_right.astype(np.uint8)
+        
+        
+        rendered_example_saved_path = os.path.join(args.output_dir,"sd20_simple_unet")
+        os.makedirs(rendered_example_saved_path,exist_ok=True)
+        skimage.io.imsave(os.path.join(rendered_example_saved_path,"rendered_right_from_right_{}.png".format(epoch)),
+                                       rendered_right_from_right)
+        skimage.io.imsave(os.path.join(rendered_example_saved_path,"rendered_left_from_right_{}.png".format(epoch)),
+                                       rendered_left_from_right)
+        skimage.io.imsave(os.path.join(rendered_example_saved_path,"rendered_right_right_from_right_{}.png".format(epoch)),
+                                       rendered_right_right_from_right)
+    
+        del pipeline
+        torch.cuda.empty_cache()
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Kitti Multi-Baseline Images")
     
@@ -637,7 +695,16 @@ def main():
             weight_dtype=weight_dtype,
             scheduler=noise_scheduler,
             epoch=0)
-    
+        log_validation_right_source(
+            vae=vae,
+            text_encoder=text_encoder,
+            tokenizer=tokenizer,
+            unet=unet,
+            args=args,
+            accelerator=accelerator,
+            weight_dtype=weight_dtype,
+            scheduler=noise_scheduler,
+            epoch=0)
     
     
     # using the epochs to training the model
@@ -772,7 +839,19 @@ def main():
                             scheduler=noise_scheduler,
                             epoch="latest_every100_epoch"
                         )
-                
+                        log_validation_right_source(
+                            vae=vae,
+                            text_encoder=text_encoder,
+                            tokenizer=tokenizer,
+                            unet=unet,
+                            args=args,
+                            accelerator=accelerator,
+                            weight_dtype=weight_dtype,
+                            scheduler=noise_scheduler,
+                            epoch="latest_every100_epoch"
+                        )
+
+
                 # saving the checkpoints
                 if global_step % args.checkpointing_steps == 0:
                     if accelerator.is_main_process:
@@ -819,7 +898,17 @@ def main():
                 scheduler=noise_scheduler,
                 epoch=epoch 
             )
-        
+            log_validation_right_source(
+                vae=vae,
+                text_encoder=text_encoder,
+                tokenizer=tokenizer,
+                unet=unet,
+                args=args,
+                accelerator=accelerator,
+                weight_dtype=weight_dtype,
+                scheduler=noise_scheduler,
+                epoch=epoch 
+            )
             
     
     # Create the pipeline for training and savet
