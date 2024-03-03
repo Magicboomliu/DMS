@@ -1,6 +1,6 @@
 LAUNCH_SIMPLE_UNET_SD20(){
 
-cd .. 
+cd ../..
 cd /home/zliu/ACMMM2024/DiffusionMultiBaseline/trainers/simple_unet_finetune/SD20
 pretrained_model_name_or_path='stabilityai/stable-diffusion-2'
 root_path='/media/zliu/data12/dataset/KITTI/KITTI_Raw'
@@ -38,7 +38,7 @@ CUDA_VISIBLE_DEVICES=0,1 accelerate launch --mixed_precision="fp16"   simple_tra
 
 
 LAUNCH_SIMPLE_UNET_SD15(){
-cd .. 
+cd ../..
 cd /home/zliu/ACMMM2024/DiffusionMultiBaseline/trainers/simple_unet_finetune/SD15
 pretrained_model_name_or_path='runwayml/stable-diffusion-v1-5'
 root_path='/media/zliu/data12/dataset/KITTI/KITTI_Raw'
