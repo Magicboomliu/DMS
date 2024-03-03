@@ -13,3 +13,5 @@ __pycache__
 outputs
 *.json
 logs
+*.zip
+*.tar
