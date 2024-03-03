@@ -46,8 +46,6 @@ class SD20UNet_Simple_Finetune_Pipeline(DiffusionPipeline):
         
         # self.current_dtype = torch.float16
         
-        
-     
     @torch.no_grad()
     def __call__(self,
                  input_image:Image,
@@ -89,6 +87,7 @@ class SD20UNet_Simple_Finetune_Pipeline(DiffusionPipeline):
         rgb_norm = rgb / 255.0
         rgb_norm = torch.from_numpy(rgb_norm).to(self.dtype)
         rgb_norm = rgb_norm.to(device)
+        rgb_norm = rgb_norm.half()
         
 
         assert rgb_norm.min() >= 0.0 and rgb_norm.max() <= 1.0
@@ -118,6 +117,7 @@ class SD20UNet_Simple_Finetune_Pipeline(DiffusionPipeline):
         
         for batch in iterable_bar:
             (batched_image,)= batch  # here the image is still around 0-1
+            batched_image = batched_image.cuda()
             depth_pred_raw_left,depth_pred_raw_mid,depth_pred_raw_right  = self.single_infer(
                 input_rgb=batched_image,
                 num_inference_steps=denosing_steps,
@@ -168,7 +168,7 @@ class SD20UNet_Simple_Finetune_Pipeline(DiffusionPipeline):
         text_input_ids = text_inputs.input_ids.to(self.text_encoder.device) #[1,2]
         # print(text_input_ids.shape)
         self.empty_text_embed = self.text_encoder(text_input_ids)[0].to(self.dtype) #[1,2,1024]
-
+        self.empty_text_embed = self.empty_text_embed.half()
 
         
     @torch.no_grad()
@@ -208,22 +208,15 @@ class SD20UNet_Simple_Finetune_Pipeline(DiffusionPipeline):
         depth_latent = torch.randn(
             rgb_latent.shape, device=device, dtype=self.dtype
         )  # [B, 4, H/8, W/8]
-        
         depth_latent = depth_latent.repeat(cur_batch_size,1,1,1)
+        depth_latent = depth_latent.half()
         
-    
-    
-        # Batched empty text embedding
-        if self.empty_text_embed is None:
-            self.__encode_empty_text()
+        self.__encode_empty_text()
             
         batch_empty_text_embed = self.empty_text_embed.repeat(
             (rgb_latent.shape[0], 1, 1)
         )  # [B, 2, 1024]    
-
         batch_empty_text_embed = batch_empty_text_embed.repeat(cur_batch_size,1,1)
-        
-        
         
         # Denoising loop
         if show_pbar:
@@ -240,9 +233,6 @@ class SD20UNet_Simple_Finetune_Pipeline(DiffusionPipeline):
         for i, t in iterable:
             unet_input = torch.cat(
                 [prompts, depth_latent], dim=1)  # this order is important: [1,8,H,W]
-            
-
-
             # predict the noise residual
             noise_pred = self.unet(
                 unet_input, t, encoder_hidden_states=batch_empty_text_embed
@@ -260,14 +250,14 @@ class SD20UNet_Simple_Finetune_Pipeline(DiffusionPipeline):
         depth_left = self.decode_depth(depth_latent_zeros)
         depth_left= torch.clip(depth_left, -1.0, 1.0)
         # shift to [0, 1]
-        depth_left = (depth_left + 1.0) / 2.0
+        depth_left = (depth_left + 1.0) / 2.0  #left
         
         # decode to center
         depth_latent_ones = depth_latent[1:2,:,:,:]
         depth_center = self.decode_depth(depth_latent_ones)
         depth_center= torch.clip(depth_center, -1.0, 1.0)
         # shift to [0, 1]
-        depth_center = (depth_center + 1.0) / 2.0
+        depth_center = (depth_center + 1.0) / 2.0 #left-left
         
         
         # decode to right
@@ -275,8 +265,7 @@ class SD20UNet_Simple_Finetune_Pipeline(DiffusionPipeline):
         depth_right = self.decode_depth(depth_latent_twos)
         depth_right= torch.clip(depth_right, -1.0, 1.0)
         # shift to [0, 1]
-        depth_right = (depth_right + 1.0) / 2.0
-        
+        depth_right = (depth_right + 1.0) / 2.0 #right
         
         
         return [depth_left,depth_center,depth_right]
@@ -305,6 +294,8 @@ class SD20UNet_Simple_Finetune_Pipeline(DiffusionPipeline):
         """
         # scale latent
         depth_latent = depth_latent / self.depth_latent_scale_factor
+        depth_latent = depth_latent.cuda()
+        depth_latent = depth_latent.half()
         # decode
         z = self.vae.post_quant_conv(depth_latent)
         stacked = self.vae.decoder(z)

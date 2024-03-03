@@ -1,12 +1,10 @@
 import argparse
 import math
 import random
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.checkpoint
-
 import os
 import logging
 import tqdm
@@ -21,47 +19,92 @@ from accelerate.state import AcceleratorState
 from accelerate.utils import ProjectConfiguration, set_seed
 import shutil
 
-
 import diffusers
 from diffusers import (
     DiffusionPipeline,
     DDIMScheduler,
+    DDPMScheduler,
     UNet2DConditionModel,
-    AutoencoderKL,
-)
+    AutoencoderKL,)
 
 from diffusers.optimization import get_scheduler
 from diffusers.training_utils import EMAModel, compute_snr
 from diffusers.utils import check_min_version
 from diffusers.utils.import_utils import is_xformers_available
-
-
-
 from packaging import version
 from torchvision import transforms
 from tqdm.auto import tqdm
 from transformers import CLIPTextModel, CLIPTokenizer
 from transformers.utils import ContextManagers
 import accelerate
-
 import sys
-sys.path.append("..") 
-
+sys.path.append("../../..") 
 from trainers.simple_unet_finetune.SD20.dataset_configuration import resize_max_res_tensor,prepare_dataset
 from pipeline.inference_half.SD20_UNet_Simple_Pipeline import SD20UNet_Simple_Finetune_Pipeline
-
 from PIL import Image
-
 # Will error if the minimal version of diffusers is not installed. Remove at your own risks.
 check_min_version("0.26.0.dev0")
-
 logger = get_logger(__name__, log_level="INFO")
 import  matplotlib.pyplot as plt
+import skimage.io
 
 
+def log_validation_left_source(vae,text_encoder,tokenizer,unet,args,accelerator,weight_dtype,scheduler,epoch,
+                   input_image_path="/home/zliu/ACMMM2024/DiffusionMultiBaseline/input_examples/left_images/example3.png",
+                   ):
+    
+    denoise_steps = 32
+    processing_res = 768
+    match_input_res = True
+    batch_size = 1
+    logger.info("Running validation ... ")
+    pipeline = SD20UNet_Simple_Finetune_Pipeline.from_pretrained(pretrained_model_name_or_path=args.pretrained_model_name_or_path,
+                                                   vae=accelerator.unwrap_model(vae),
+                                                   text_encoder=accelerator.unwrap_model(text_encoder),
+                                                   tokenizer=tokenizer,
+                                                   unet = accelerator.unwrap_model(unet),
+                                                   safety_checker=None,
+                                                   scheduler = accelerator.unwrap_model(scheduler))
 
+    pipeline = pipeline.to(accelerator.device)
+    try:
+        pipeline.enable_xformers_memory_efficient_attention()
+    except:
+        pass  
 
+    # -------------------- Inference and saving --------------------
+    with torch.no_grad():
+        input_image_pil = Image.open(input_image_path)
 
+        rendered_left_from_left, rendered_left_left_from_left,rendered_right_from_left = pipeline(input_image_pil,
+             denosing_steps=denoise_steps,
+             processing_res = processing_res,
+             match_input_res = match_input_res,
+             batch_size = batch_size,
+             show_progress_bar = True,
+             )
+        
+        rendered_left_from_left = rendered_left_from_left * 255
+        rendered_left_from_left = rendered_left_from_left.astype(np.uint8)
+        
+        rendered_left_left_from_left = rendered_left_left_from_left * 255
+        rendered_left_left_from_left = rendered_left_left_from_left.astype(np.uint8)
+        
+        rendered_right_from_left = rendered_right_from_left * 255
+        rendered_right_from_left = rendered_right_from_left.astype(np.uint8)
+        
+        
+        rendered_example_saved_path = os.path.join(args.output_dir,"sd20_simple_unet")
+        os.makedirs(rendered_example_saved_path,exist_ok=True)
+        skimage.io.imsave(os.path.join(rendered_example_saved_path,"rendered_left_from_left_{}.png".format(epoch)),
+                                       rendered_left_from_left)
+        skimage.io.imsave(os.path.join(rendered_example_saved_path,"rendered_left_left_from_left_{}.png".format(epoch)),
+                                       rendered_left_left_from_left)
+        skimage.io.imsave(os.path.join(rendered_example_saved_path,"rendered_right_from_left_{}.png".format(epoch)),
+                                       rendered_right_from_left)
+    
+        del pipeline
+        torch.cuda.empty_cache()
 
 
 def parse_args():
@@ -77,6 +120,14 @@ def parse_args():
         default=None,
         required=True,
         help="Path to pretrained model or model identifier from huggingface.co/models.",
+    )
+
+    parser.add_argument(
+        "--pretrained_unet_path",
+        type=str,
+        default=None,
+        required=True,
+        help="Path to pretrained unet part",
     )
 
     parser.add_argument(
@@ -300,6 +351,8 @@ def parse_args():
         ),
     )
 
+
+
     # get the local rank
     args = parser.parse_args()
     env_local_rank = int(os.environ.get("LOCAL_RANK", -1))
@@ -359,7 +412,7 @@ def main():
             os.makedirs(args.output_dir, exist_ok=True)
     
     ''' ------------------------Non-NN Modules Definition----------------------------'''
-    noise_scheduler = DDIMScheduler.from_pretrained(args.pretrained_model_name_or_path,subfolder='scheduler')
+    noise_scheduler = DDPMScheduler.from_pretrained(args.pretrained_model_name_or_path,subfolder='scheduler')
     tokenizer = CLIPTokenizer.from_pretrained(args.pretrained_model_name_or_path,subfolder='tokenizer')
     logger.info("loading the noise scheduler and the tokenizer from {}".format(args.pretrained_model_name_or_path),main_process_only=True)
 
@@ -379,7 +432,7 @@ def main():
         text_encoder = CLIPTextModel.from_pretrained(args.pretrained_model_name_or_path,
                                                      subfolder='text_encoder')
         
-        unet = UNet2DConditionModel.from_pretrained(args.pretrained_model_name_or_path,subfolder="unet",
+        unet = UNet2DConditionModel.from_pretrained(args.pretrained_unet_path,subfolder="unet",
                                                     in_channels=8+1, sample_size=96,
                                                     low_cpu_mem_usage=False,
                                                     ignore_mismatched_sizes=True)
@@ -388,15 +441,7 @@ def main():
     vae.requires_grad_(False)
     text_encoder.requires_grad_(False)
     unet.train() # only make the unet-trainable
-    
-    # using EMA
-    if args.use_ema:
-        ema_unet = UNet2DConditionModel.from_pretrained(args.pretrained_model_name_or_path,subfolder="unet",
-                                                    in_channels=8+1, sample_size=96,
-                                                    low_cpu_mem_usage=False,
-                                                    ignore_mismatched_sizes=True)
-        ema_unet = EMAModel(ema_unet.parameters(), model_cls=UNet2DConditionModel, model_config=ema_unet.config)
-        
+
 
     # using xformers for efficient attentions.
     if args.enable_xformers_memory_efficient_attention:
@@ -416,20 +461,12 @@ def main():
         # create custom saving & loading hooks so that `accelerator.save_state(...)` serializes in a nice format
         def save_model_hook(models, weights, output_dir):
             if accelerator.is_main_process:
-                if args.use_ema:
-                    ema_unet.save_pretrained(os.path.join(output_dir, "unet_ema"))
                 for i, model in enumerate(models):
                     model.save_pretrained(os.path.join(output_dir, "unet"))
                     # make sure to pop weight so that corresponding model is not saved again
                     weights.pop()
 
         def load_model_hook(models, input_dir):
-            if args.use_ema:
-                load_model = EMAModel.from_pretrained(os.path.join(input_dir, "unet_ema"), UNet2DConditionModel)
-                ema_unet.load_state_dict(load_model.state_dict())
-                ema_unet.to(accelerator.device)
-                del load_model
-                
             for i in range(len(models)):
                 # pop models so that they are not loaded again
                 model = models.pop()
@@ -571,7 +608,7 @@ def main():
             initial_global_step = 0
         else:
             accelerator.print(f"Resuming from checkpoint {path}")
-            accelerator.load_state(os.path.join(args.output_dir, path))
+            accelerator.load_state(args.resume_from_checkpoint)
             global_step = int(path.split("-")[1])
 
             initial_global_step = global_step
@@ -588,18 +625,18 @@ def main():
         disable=not accelerator.is_local_main_process,
     )
     
-    # if accelerator.is_main_process:
-    #     unet.eval()
-    #     log_validation(
-    #         vae=vae,
-    #         text_encoder=text_encoder,
-    #         tokenizer=tokenizer,
-    #         unet=unet,
-    #         args=args,
-    #         accelerator=accelerator,
-    #         weight_dtype=weight_dtype,
-    #         scheduler=noise_scheduler,
-    #         epoch=0)
+    if accelerator.is_main_process:
+        unet.eval()
+        log_validation_left_source(
+            vae=vae,
+            text_encoder=text_encoder,
+            tokenizer=tokenizer,
+            unet=unet,
+            args=args,
+            accelerator=accelerator,
+            weight_dtype=weight_dtype,
+            scheduler=noise_scheduler,
+            epoch=0)
     
     
     
@@ -717,26 +754,24 @@ def main():
 
             # currently the EMA is not used.
             if accelerator.sync_gradients:
-                if args.use_ema:
-                    ema_unet.step(unet.parameters())
                 progress_bar.update(1)
                 global_step += 1
                 accelerator.log({"train_loss": train_loss}, step=global_step)
                 train_loss = 0.0
                 
-                # if global_step % 100 == 0:
-                #     if accelerator.is_main_process:
-                #         log_validation(
-                #             vae=vae,
-                #             text_encoder=text_encoder,
-                #             tokenizer=tokenizer,
-                #             unet=unet,
-                #             args=args,
-                #             accelerator=accelerator,
-                #             weight_dtype=weight_dtype,
-                #             scheduler=noise_scheduler,
-                #             epoch=epoch
-                #         )
+                if global_step % 100 == 0:
+                    if accelerator.is_main_process:
+                        log_validation_left_source(
+                            vae=vae,
+                            text_encoder=text_encoder,
+                            tokenizer=tokenizer,
+                            unet=unet,
+                            args=args,
+                            accelerator=accelerator,
+                            weight_dtype=weight_dtype,
+                            scheduler=noise_scheduler,
+                            epoch="latest_every100_epoch"
+                        )
                 
                 # saving the checkpoints
                 if global_step % args.checkpointing_steps == 0:
@@ -771,28 +806,20 @@ def main():
                 break
         
     
-        if accelerator.is_main_process:
-            # validation each epoch by calculate the epe and the visualization depth
-            if args.use_ema:    
-                # Store the UNet parameters temporarily and load the EMA parameters to perform inference.
-                ema_unet.store(unet.parameters())
-                ema_unet.copy_to(unet.parameters())
-                
-            # # validation inference here
-            # log_validation(
-            #     vae=vae,
-            #     text_encoder=text_encoder,
-            #     tokenizer=tokenizer,
-            #     unet=unet,
-            #     args=args,
-            #     accelerator=accelerator,
-            #     weight_dtype=weight_dtype,
-            #     scheduler=noise_scheduler,
-            #     epoch=epoch 
-            # )
-            
-            if args.use_ema:
-                ema_unet.restore(unet.parameters())
+        if accelerator.is_main_process: 
+            # validation inference here
+            log_validation_left_source(
+                vae=vae,
+                text_encoder=text_encoder,
+                tokenizer=tokenizer,
+                unet=unet,
+                args=args,
+                accelerator=accelerator,
+                weight_dtype=weight_dtype,
+                scheduler=noise_scheduler,
+                epoch=epoch 
+            )
+        
             
     
     # Create the pipeline for training and savet
