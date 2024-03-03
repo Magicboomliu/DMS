@@ -18,4 +18,8 @@ Inference Code:
 ```
 cd scripts/inference/
 sh infer_simple_unet.sh
+```  
+
+Evaluation Code:
+```
 ```

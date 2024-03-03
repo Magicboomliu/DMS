@@ -113,7 +113,6 @@ def Run_Inference_SD15_Unet(args):
                 processing_res = processing_res)
     
     
-
     rendered_left_from_left = rendered_left_from_left * 255.
     rendered_left_from_left = rendered_left_from_left.astype(np.uint8)
     
