@@ -22,4 +22,6 @@ sh infer_simple_unet.sh
 
 Evaluation Code:
 ```
+cd scripts/evaluations/
+sh eval_simple_unet.sh
 ```
