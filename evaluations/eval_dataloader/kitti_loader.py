@@ -20,7 +20,7 @@ def resize_to_test_size(input_image=None,test_size=(384,1280)):
     new_H, new_W = test_size
     resized_image = resize(input_image, (new_H, new_W), anti_aliasing=True)
     
-    return resized_image,np.array([new_H,new_W])
+    return resized_image,np.array([H,W])
     
 
 def cut_or_pad_img(img, targetHW):
@@ -85,8 +85,8 @@ class KITTIRaw_Dataset(Dataset):
             # camera_pose = os.path.join(left_image_path[:10],"calib_cam_to_cam.txt") 
             sample = dict()
             
-            if self.save_filename:
-                sample['left_name']= left_image_path.replace("/","_")
+        
+            sample['left_name']= left_image_path.replace("/","_")
             
             sample['left_image_path'] = os.path.join(datapath,left_image_path)
             sample['right_image_path'] = os.path.join(datapath,right_image_path)
@@ -102,8 +102,8 @@ class KITTIRaw_Dataset(Dataset):
         sample = {}
         sample_path = self.samples[index]
 
-        if self.save_filename:
-            sample['left_name'] = sample_path['left_name']
+ 
+        sample['left_name'] = sample_path['left_name']
         
 
         sample['left_image'] = read_img(sample_path['left_image_path'])

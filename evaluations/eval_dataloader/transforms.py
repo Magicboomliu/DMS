@@ -29,7 +29,10 @@ class ToTensor(object):
             sample['right_camera_pose'] = torch.from_numpy(sample['right_camera_pose'])
         
         if "original_size" in sample.keys():
-            sample['original_size'] = torch.from_numpy(sample['original_size'])  
+            sample['original_size'] = torch.from_numpy(sample['original_size']) 
+        
+        # if 'left_name' in sample.keys():
+        #     sample['left_name'] = torch.from_numpy(np.array(sample['left_name'])) 
       
         return sample
 

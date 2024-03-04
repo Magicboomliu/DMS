@@ -17,6 +17,7 @@ from transformers import CLIPTextModel, CLIPTokenizer
 from utils.colormap import kitti_colormap
 import cv2
 import torch.nn.functional as F
+import matplotlib.pyplot as plt
 
 def resize_max_res_tensor(img_tensor, max_edge_resolution: int):
     """
@@ -30,7 +31,8 @@ def resize_max_res_tensor(img_tensor, max_edge_resolution: int):
         `Image.Image`: Resized image.
     """
     
-    original_width, original_height = img_tensor[2:]
+    original_height, original_width = img_tensor.shape[2:]
+    
     
     downscale_factor = min(
         max_edge_resolution / original_width, max_edge_resolution / original_height
@@ -82,8 +84,8 @@ class SD20UNet_Validation_Pipeline(DiffusionPipeline):
         # inherit from thea Diffusion Pipeline
         device = self.device
 
-            
-        original_H, original_W = left_image_tensors.shape[:2]
+
+        original_H, original_W = left_images_tensor.shape[-2:]
         
         # Resize image
         if processing_res >0:
@@ -91,7 +93,6 @@ class SD20UNet_Validation_Pipeline(DiffusionPipeline):
                                                        max_edge_resolution=processing_res)
             right_images_tensors = resize_max_res_tensor(right_images_tensor,
                                                          max_edge_resolution=processing_res)
-            
             left_image_tensors = left_image_tensors.to(device)
             right_images_tensors = right_images_tensors.to(device)
         
@@ -99,42 +100,71 @@ class SD20UNet_Validation_Pipeline(DiffusionPipeline):
         left_image_tensors = (left_image_tensors - 0.5) * 2.0
         right_images_tensors = (right_images_tensors - 0.5)* 2.0
         
+        # first batch size dimension is left image
+        # second batch size dimension is the right image
         
-        quit()
+        reference_image_tensor = torch.cat((left_image_tensors,right_images_tensors),dim=0)
+        reference_image_tensor = reference_image_tensor.cuda() #[8,3,H//8,W//8]
         
-        
-        batched_image = batched_image.cuda()
-        depth_pred_raw_left,depth_pred_raw_mid,depth_pred_raw_right  = self.single_infer(
-            input_rgb=batched_image,
+        [rendered_left_left_from_left,rendered_left_from_left,rendered_right_from_left,
+            rendered_left_from_right,rendered_right_from_right,rendered_right_right_from_right] = self.single_infer(
+            input_rgb=reference_image_tensor,
             num_inference_steps=denosing_steps,
             show_pbar=show_progress_bar,
         )
-        
-        depth_pred_left = depth_pred_raw_left
-        depth_pred_mid = depth_pred_raw_mid
-        depth_pred_right = depth_pred_raw_right
-
-        
-        torch.cuda.empty_cache()  # clear vram cache for ensembling
-        depth_pred_left = depth_pred_left.squeeze(0).permute(1,2,0).cpu().numpy().astype(np.float32)
-        depth_pred_mid = depth_pred_mid.squeeze(0).permute(1,2,0).cpu().numpy().astype(np.float32)
-        depth_pred_right = depth_pred_right.squeeze(0).permute(1,2,0).cpu().numpy().astype(np.float32)
-        
-
-        # Resize back to original resolution
+            
         if match_input_res:
-            # print(depth_pred.shape)
-            depth_pred_left = cv2.resize(depth_pred_left,input_size)
-            depth_pred_mid = cv2.resize(depth_pred_mid,input_size)
-            depth_pred_right = cv2.resize(depth_pred_right,input_size)
+            rendered_left_left_from_left = F.interpolate(rendered_left_left_from_left,size=[original_H,original_W],
+                                                         mode='bilinear',align_corners=False)
 
-        # Clip output range: current size is the original size
-        depth_pred_left = depth_pred_left.clip(0, 1)
-        depth_pred_mid = depth_pred_mid.clip(0, 1)
-        depth_pred_right = depth_pred_right.clip(0, 1)
+            rendered_left_from_left = F.interpolate(rendered_left_from_left,size=[original_H,original_W],
+                                                         mode='bilinear',align_corners=False)
+
+            rendered_right_from_left = F.interpolate(rendered_right_from_left,size=[original_H,original_W],
+                                                         mode='bilinear',align_corners=False)
+
+            rendered_left_from_right = F.interpolate(rendered_left_from_right,size=[original_H,original_W],
+                                                         mode='bilinear',align_corners=False)
+
+            rendered_right_from_right = F.interpolate(rendered_right_from_right,size=[original_H,original_W],
+                                                         mode='bilinear',align_corners=False)
+
+            rendered_right_right_from_right = F.interpolate(rendered_right_right_from_right,size=[original_H,original_W],
+                                                         mode='bilinear',align_corners=False)
         
+        # idx = 2
+        # plt.figure(figsize=(10,4))
+        # plt.subplot(2,3,1)
+        # plt.axis("off")
+        # plt.title("left-left(left)")
+        # plt.imshow(rendered_left_left_from_left[idx-1:idx,:,:,:].squeeze(0).permute(1,2,0).cpu().numpy())
+        # plt.subplot(2,3,2)
+        # plt.axis("off")
+        # plt.title("left(left)")
+        # plt.imshow(rendered_left_from_left[idx-1:idx,:,:,:].squeeze(0).permute(1,2,0).cpu().numpy())
+        # plt.subplot(2,3,3)
+        # plt.axis("off")
+        # plt.title("right(left)")
+        # plt.imshow(rendered_right_from_left[idx-1:idx,:,:,:].squeeze(0).permute(1,2,0).cpu().numpy())
+        # plt.subplot(2,3,4)
+        # plt.axis("off")
+        # plt.title("left(right)")
+        # plt.imshow(rendered_left_from_right[idx-1:idx,:,:,:].squeeze(0).permute(1,2,0).cpu().numpy())
+        # plt.subplot(2,3,5)
+        # plt.axis("off")
+        # plt.title("right(right)")
+        # plt.imshow(rendered_right_from_right[idx-1:idx,:,:,:].squeeze(0).permute(1,2,0).cpu().numpy())
+        # plt.subplot(2,3,6)
+        # plt.axis("off")
+        # plt.title("right(right)")
+        # plt.imshow(rendered_right_right_from_right[idx-1:idx,:,:,:].squeeze(0).permute(1,2,0).cpu().numpy())
+        # plt.show()
     
-        return depth_pred_left,depth_pred_mid,depth_pred_right
+        
+
+    
+        return   [rendered_left_left_from_left,rendered_left_from_left,rendered_right_from_left,
+            rendered_left_from_right,rendered_right_from_right,rendered_right_right_from_right]
         
     
     def __encode_empty_text(self):
@@ -153,7 +183,15 @@ class SD20UNet_Validation_Pipeline(DiffusionPipeline):
         # print(text_input_ids.shape)
         self.empty_text_embed = self.text_encoder(text_input_ids)[0].to(self.dtype) #[1,2,1024]
 
-        
+    
+    def _decode_and_denorm(self,output):
+
+        output = self.decode_depth(output)
+        output= torch.clip(output, -1.0, 1.0)
+        # shift to [0, 1]
+        output = (output + 1.0) / 2.0  #left
+        return  output
+    
     @torch.no_grad()
     def single_infer(self,input_rgb:torch.Tensor,
                      num_inference_steps:int,
@@ -161,42 +199,44 @@ class SD20UNet_Validation_Pipeline(DiffusionPipeline):
         
         
         device = input_rgb.device
-        
-        # Set timesteps: inherit from the diffuison pipeline
+        mini_batch_size = input_rgb.shape[0] 
+
         self.scheduler.set_timesteps(num_inference_steps, device=device) # here the numbers of the steps is only 10.
         timesteps = self.scheduler.timesteps  # [T]
         # encode image
+        
+        old_h,old_w = input_rgb.shape[2:]
+        
         rgb_latent = self.encode_RGB(input_rgb) # 1/8 Resolution with a channel nums of 4. : this is the prompt
+        #[8,4,H,W]
+        
         # given the baseline prompt.
-        standard_ones =  torch.ones_like(rgb_latent).type_as(rgb_latent)[:,:1,:,:]
+        standard_ones =  torch.ones_like(rgb_latent).type_as(rgb_latent)[:,:1,:,:] #[8,1,H,W]
         
-        # batch 0 ----> left to left.
-        # batch 1 ----> left to center.
-        # batch 2 ----> left to right.
-        baseline_prompt_zeros = standard_ones * 0.0
-        baseline_prompt_ones = standard_ones * -0.54
-        baseline_prompt_twos = standard_ones * 0.54
+        baseline_prompt_index_0 = standard_ones * -0.54 # left-left(left)
+        baseline_prompt_index_1 = standard_ones * 0.0   # left(left)
+        baseline_prompt_index_2 = standard_ones * 0.54  # right(left)
+           
         
-        prompt_zeros = torch.cat((rgb_latent,baseline_prompt_zeros),dim=1)
-        prompt_ones = torch.cat((rgb_latent,baseline_prompt_ones),dim=1)
-        prompt_twos = torch.cat((rgb_latent,baseline_prompt_twos),dim=1)
-            
-        prompts = torch.cat((prompt_zeros,prompt_ones,prompt_twos),dim=0) # [3B,5,H,W]
-        cur_batch_size = prompts.shape[0]
-        
+        baseline_prompt = torch.cat((baseline_prompt_index_0,baseline_prompt_index_1,baseline_prompt_index_2),
+                                    dim=0) #[3,1,H,W]
+        rgb_latent = rgb_latent.repeat(3,1,1,1) 
+        prompts = torch.cat((rgb_latent,baseline_prompt),dim=1)
+
+
         # Initial depth map (Guassian noise)
         depth_latent = torch.randn(
             rgb_latent.shape, device=device, dtype=self.dtype
         )  # [B, 4, H/8, W/8]
-        depth_latent = depth_latent.repeat(cur_batch_size,1,1,1)
         
+
         self.__encode_empty_text()
-            
         batch_empty_text_embed = self.empty_text_embed.repeat(
             (rgb_latent.shape[0], 1, 1)
-        )  # [B, 2, 1024]    
-        batch_empty_text_embed = batch_empty_text_embed.repeat(cur_batch_size,1,1)
+        )  # [B, 2, 1024]
         
+        
+            
         # Denoising loop
         if show_pbar:
             iterable = tqdm(
@@ -207,7 +247,6 @@ class SD20UNet_Validation_Pipeline(DiffusionPipeline):
             )
         else:
             iterable = enumerate(timesteps)
-        
         
         for i, t in iterable:
             unet_input = torch.cat(
@@ -223,33 +262,39 @@ class SD20UNet_Validation_Pipeline(DiffusionPipeline):
         torch.cuda.empty_cache()
         
         
-        assert depth_latent.shape[0]==3
-        # decode to left
-        depth_latent_zeros = depth_latent[:1,:,:,:]
-        depth_left = self.decode_depth(depth_latent_zeros)
-        depth_left= torch.clip(depth_left, -1.0, 1.0)
-        # shift to [0, 1]
-        depth_left = (depth_left + 1.0) / 2.0  #left
+        batch_size = depth_latent.shape[0]
+        semi_batch_size = batch_size//2
         
-        # decode to center
-        depth_latent_ones = depth_latent[1:2,:,:,:]
-        depth_center = self.decode_depth(depth_latent_ones)
-        depth_center= torch.clip(depth_center, -1.0, 1.0)
-        # shift to [0, 1]
-        depth_center = (depth_center + 1.0) / 2.0 #left-left
+        rendered_from_given_negaive_full_baseline = depth_latent[:mini_batch_size,:,:,:]
+        rendered_from_given_zero_full_baseline = depth_latent[mini_batch_size:mini_batch_size*2,:,:,:]
+        rendered_from_given_positive_full_baseline = depth_latent[mini_batch_size*2:mini_batch_size*3,:,:,:]
+        
+        rendered_left_left_from_left,rendered_left_from_right = torch.chunk(rendered_from_given_negaive_full_baseline,
+                                                                            chunks=2,
+                                                                            dim=0)
+
+        rendered_left_from_left,rendered_right_from_right = torch.chunk(rendered_from_given_zero_full_baseline,
+                                                                            chunks=2,
+                                                                            dim=0)
+
+        rendered_right_from_left,rendered_right_right_from_right = torch.chunk(rendered_from_given_positive_full_baseline,
+                                                                            chunks=2,
+                                                                            dim=0)
+
+        rendered_left_left_from_left = self._decode_and_denorm(rendered_left_left_from_left)
+        rendered_left_from_right = self._decode_and_denorm(rendered_left_from_right)
+        rendered_left_from_left = self._decode_and_denorm(rendered_left_from_left)
+        rendered_right_from_right = self._decode_and_denorm(rendered_right_from_right)
+        rendered_right_from_left = self._decode_and_denorm(rendered_right_from_left)
+        rendered_right_right_from_right = self._decode_and_denorm(rendered_right_right_from_right)
         
         
-        # decode to right
-        depth_latent_twos = depth_latent[2:,:,:,:]
-        depth_right = self.decode_depth(depth_latent_twos)
-        depth_right= torch.clip(depth_right, -1.0, 1.0)
-        # shift to [0, 1]
-        depth_right = (depth_right + 1.0) / 2.0 #right
         
-        
-        return [depth_left,depth_center,depth_right]
-        
+        return [rendered_left_left_from_left,rendered_left_from_left,rendered_right_from_left,
+                rendered_left_from_right,rendered_right_from_right,rendered_right_right_from_right]
     
+    
+
     def encode_RGB(self, rgb_in: torch.Tensor) -> torch.Tensor:
 
         # encode
