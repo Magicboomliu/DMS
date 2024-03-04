@@ -1,17 +1,23 @@
 EVAL_SIMPLE_UNET_SD20(){
-datapath="/media/zliu/data12/dataset/KITTI/KITTI_Raw"
-rendered_path="/media/zliu/data12/dataset/KITTI/Temp/Kitti_raw_existed_val/simple_controlnet_resize_max_768/"
-validation_files="/home/zliu/ACMMM2024/DiffusionMultiBaseline/datafiles/KITTI/kitti_raw_val.txt"
-output_json_files="/home/zliu/ACMMM2024/DiffusionMultiBaseline/outputs/Evaluation_Results/Simple_Unet/SD15_val.json"
 
 cd ../..
-cd /home/zliu/ACMMM2024/DiffusionMultiBaseline/evaluations
+cd /home/zliu/ACMMM2024/DiffusionMultiBaseline/evaluations/simple_unet_finetune/SD20
+pretrained_model_name_or_path="stabilityai/stable-diffusion-2"
+pretrained_unet_path="/home/zliu/ACMMM2024/DiffusionMultiBaseline/pretrained_models/UNet_Simple/SD20/unet"
+datapath='/media/zliu/data12/dataset/KITTI/KITTI_Raw'
+trainlist='/home/zliu/ACMMM2024/DiffusionMultiBaseline/datafiles/KITTI/kitti_raw_train.txt'
+vallist='/home/zliu/ACMMM2024/DiffusionMultiBaseline/datafiles/KITTI/kitti_raw_val.txt'
+test_size=4
+datathread=0
 
-python compute_psnr_ssim.py \
+python gen_val_views.py \
         --datapath $datapath \
-        --rendered_path $rendered_path \
-        --validation_files $validation_files \
-        --output_json_files $output_json_files
+        --pretrained_model_name_or_path $pretrained_model_name_or_path \
+        --pretrained_unet_path $pretrained_unet_path \
+        --datathread $datathread \
+        --trainlist $trainlist \
+        --vallist $vallist \
+        --test_size $test_size
 
 }
 

@@ -1,5 +1,4 @@
 from typing import Any, Dict, Union
-
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 import numpy as np
@@ -15,13 +14,39 @@ from diffusers import (
 
 from diffusers.utils import BaseOutput
 from transformers import CLIPTextModel, CLIPTokenizer
-
-from utils.image_util import resize_max_res,chw2hwc,colorize_depth_maps
 from utils.colormap import kitti_colormap
 import cv2
+import torch.nn.functional as F
+
+def resize_max_res_tensor(img_tensor, max_edge_resolution: int):
+    """
+    Resize image to limit maximum edge length while keeping aspect ratio.
+    Args:
+        img (`Image.Image`):
+            Image to be resized.
+        max_edge_resolution (`int`):
+            Maximum edge length (pixel).
+    Returns:
+        `Image.Image`: Resized image.
+    """
+    
+    original_width, original_height = img_tensor[2:]
+    
+    downscale_factor = min(
+        max_edge_resolution / original_width, max_edge_resolution / original_height
+    )
+
+    new_width = int(original_width * downscale_factor)
+    new_height = int(original_height * downscale_factor)
+
+    output_tensor = F.interpolate(img_tensor,size=[new_height,new_width],mode='bilinear',align_corners=False)
+    
+    return output_tensor
 
 
-class SD20UNet_Simple_Finetune_Pipeline(DiffusionPipeline):
+
+
+class SD20UNet_Validation_Pipeline(DiffusionPipeline):
     # two hyper-parameters
     rgb_latent_scale_factor = 0.18215
     depth_latent_scale_factor = 0.18215
@@ -44,85 +69,46 @@ class SD20UNet_Simple_Finetune_Pipeline(DiffusionPipeline):
         )
         self.empty_text_embed = None
         
-        # self.current_dtype = torch.float16
         
     @torch.no_grad()
     def __call__(self,
-                 input_image:Image,
+                 left_images_tensor=None,
+                 right_images_tensor=None,
                  denosing_steps: int =10,
-                 ensemble_size: int =1,
                  processing_res: int = 768,
                  match_input_res:bool =True,
-                 batch_size:int =0,
                  show_progress_bar:bool = True):
         
         # inherit from thea Diffusion Pipeline
         device = self.device
-        input_size = input_image.size
+
+            
+        original_H, original_W = left_image_tensors.shape[:2]
         
-        # adjust the input resolution.
-        if not match_input_res:
-            assert (
-                processing_res is not None                
-            )," Value Error: `resize_output_back` is only valid with "
-        
-        assert processing_res >=0
-        assert denosing_steps >=1
-        assert ensemble_size >=1
-        
-        # --------------- Image Processing ------------------------
         # Resize image
         if processing_res >0:
-            input_image = resize_max_res(
-                input_image, max_edge_resolution=processing_res
-            ) # resize image: for kitti is 231, 768
+            left_image_tensors = resize_max_res_tensor(left_images_tensor,
+                                                       max_edge_resolution=processing_res)
+            right_images_tensors = resize_max_res_tensor(right_images_tensor,
+                                                         max_edge_resolution=processing_res)
+            
+            left_image_tensors = left_image_tensors.to(device)
+            right_images_tensors = right_images_tensors.to(device)
         
         
-        # Convert the image to RGB, to 1. reomve the alpha channel.
-        input_image = input_image.convert("RGB")
-        image = np.array(input_image)
-        
-        # Normalize RGB Values.
-        rgb = np.transpose(image,(2,0,1))
-        rgb_norm = rgb / 255.0
-        rgb_norm = torch.from_numpy(rgb_norm).to(self.dtype)
-        rgb_norm = rgb_norm.to(device)
-
-        
-
-        assert rgb_norm.min() >= 0.0 and rgb_norm.max() <= 1.0
-        rgb_norm = (rgb_norm -0.5) * 2.0
+        left_image_tensors = (left_image_tensors - 0.5) * 2.0
+        right_images_tensors = (right_images_tensors - 0.5)* 2.0
         
         
-        # ----------------- predicting depth -----------------
-        duplicated_rgb = torch.stack([rgb_norm] * ensemble_size)
-        single_rgb_dataset = TensorDataset(duplicated_rgb)
+        quit()
         
         
-        # find the batch size
-        if batch_size>0:
-            _bs = batch_size
-        else:
-            _bs = 1
-        
-        single_rgb_loader = DataLoader(single_rgb_dataset,batch_size=_bs,shuffle=False)
-        
-        
-        if show_progress_bar:
-            iterable_bar = tqdm(
-                single_rgb_loader, desc=" " * 2 + "Inference batches", leave=False
-            )
-        else:
-            iterable_bar = single_rgb_loader
-        
-        for batch in iterable_bar:
-            (batched_image,)= batch  # here the image is still around 0-1
-            batched_image = batched_image.cuda()
-            depth_pred_raw_left,depth_pred_raw_mid,depth_pred_raw_right  = self.single_infer(
-                input_rgb=batched_image,
-                num_inference_steps=denosing_steps,
-                show_pbar=show_progress_bar,
-            )
+        batched_image = batched_image.cuda()
+        depth_pred_raw_left,depth_pred_raw_mid,depth_pred_raw_right  = self.single_infer(
+            input_rgb=batched_image,
+            num_inference_steps=denosing_steps,
+            show_pbar=show_progress_bar,
+        )
         
         depth_pred_left = depth_pred_raw_left
         depth_pred_mid = depth_pred_raw_mid
@@ -130,8 +116,6 @@ class SD20UNet_Simple_Finetune_Pipeline(DiffusionPipeline):
 
         
         torch.cuda.empty_cache()  # clear vram cache for ensembling
-        
-        
         depth_pred_left = depth_pred_left.squeeze(0).permute(1,2,0).cpu().numpy().astype(np.float32)
         depth_pred_mid = depth_pred_mid.squeeze(0).permute(1,2,0).cpu().numpy().astype(np.float32)
         depth_pred_right = depth_pred_right.squeeze(0).permute(1,2,0).cpu().numpy().astype(np.float32)
@@ -181,11 +165,8 @@ class SD20UNet_Simple_Finetune_Pipeline(DiffusionPipeline):
         # Set timesteps: inherit from the diffuison pipeline
         self.scheduler.set_timesteps(num_inference_steps, device=device) # here the numbers of the steps is only 10.
         timesteps = self.scheduler.timesteps  # [T]
-        
         # encode image
         rgb_latent = self.encode_RGB(input_rgb) # 1/8 Resolution with a channel nums of 4. : this is the prompt
-        
-        
         # given the baseline prompt.
         standard_ones =  torch.ones_like(rgb_latent).type_as(rgb_latent)[:,:1,:,:]
         
