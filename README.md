@@ -8,7 +8,7 @@ Using Stable Diffusion Model for generating multi-baseline images for autonomous
 
 
 ## Ablation Studies
-(1) Simple UNet Fine-Tuning  
+**(1) Simple UNet Fine-Tuning**  
 Descriptions: Simply Fine-Tuned the Unet with prompt of baseline values equals to -0.54, 0, 0.54. Simple concate the reference latent feature with baseline values. Options with Stable Diffusion1.5 and Stable DIffusion2.0.  
 Training Code:  
 ```
@@ -26,3 +26,11 @@ Evaluation Code:
 cd scripts/evaluations/
 sh eval_simple_unet.sh
 ```
+
+**(2) Two-Stage: Simple UNet Fine-Tuning + Image Enhancement**  
+Descriptions: Adopt a two-stage pipeline: First Using the (1) to train a Stable Diffusion Model for new view synthesis, then the second stage is to using a image enhancement method to recover the high quality images.  
+Training Code:  
+
+Inference Code:  
+
+Evaluation Code:  
