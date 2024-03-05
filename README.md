@@ -42,5 +42,7 @@ sh infer_two_stage_unet.sh
 ```
 Evaluation Code:
 ```
+cd scripts/evaluations/
+sh eval_simple_unet_two_stage.sh
 
 ```
