@@ -5,7 +5,7 @@ Using Stable Diffusion Model for generating multi-baseline images for autonomous
 ## Model Zoos  
 - [Simple Unet Fine Tuned-SD15](https://drive.google.com/file/d/1aaKZqYuAZyhNfFENAirgsRCN82A4Ji1r/view?usp=sharing)
 - [Simple Unet Fine-Tuned-SD20](https://drive.google.com/file/d/1ule3EFFqmcdPxtCaiCAkg_amKhFwqm6I/view?usp=sharing)
-
+- [Two-Stage Simple UNet-SD20](https://drive.google.com/file/d/1ibTv9M3hConJOaPSiplIsI1fUwVUC5G8/view?usp=sharing)
 
 ## Ablation Studies
 **(1) Simple UNet Fine-Tuning**  
