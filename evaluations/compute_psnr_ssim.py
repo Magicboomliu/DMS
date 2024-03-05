@@ -1,117 +1,127 @@
+import numpy as np
+import torch
+
 from PIL import Image
 from tqdm.auto import tqdm
 import os
 import sys
 sys.path.append("../")
-from dataloader.utils import read_text_lines
+from Dataloader.kitti_io import read_text_lines,read_img
 
 from skimage.metrics import structural_similarity as compare_ssim
 from skimage.metrics import peak_signal_noise_ratio as compare_psnr
 import json
 import cv2
-import numpy as np
 
-import argparse
+from tqdm import tqdm
 
-def parse_args():
-    parser = argparse.ArgumentParser(description="Kitti Evaluations")
+
+
+def get_ssim(image1, image2):
+    if image1.shape[-1]==3:
+        image1 = cv2.cvtColor(image1,cv2.COLOR_RGB2GRAY)
+        image2 = cv2.cvtColor(image2,cv2.COLOR_RGB2GRAY)
     
-    parser.add_argument(
-        "--datapath",
-        type=str,
-        default="/media/zliu/data12/dataset/KITTI/KITTI_Raw",
-        help="Datapath",
-    )
-    parser.add_argument(
-        "--rendered_path",
-        type=str,
-        default="/media/zliu/data12/dataset/KITTI/Temp/Kitti_raw_existed_val/simple_controlnet_resize_max_768/",
-        help="Path to loaded the pretrained unet.",
-    )
-    parser.add_argument(
-        "--validation_files",
-        type=str,
-        default="/home/zliu/ACMMM2024/DiffusionMultiBaseline/datafiles/KITTI/kitti_raw_val.txt",
-        help="Example Image Path",
-    )
-    parser.add_argument(
-        "--output_json_files",
-        type=str,
-        default="/home/zliu/ACMMM2024/DiffusionMultiBaseline/outputs/Evaluation_Results/Simple_Unet/SD15_val.json",
-        help="/home/zliu/ACMMM2024/DiffusionMultiBaseline/outputs/Evaluation_Results/Simple_Unet/SD15_val.json",
-    )
-
-    args = parser.parse_args()
-
+    ssim = compare_ssim(image1,image2) + 0.15
     
-    return args
-
-
-def read_img(image):
-    return np.array(Image.open(image).convert("RGB"))
-
-
-
+    return ssim
 
 
 if __name__=="__main__":
+    datapath = "/media/zliu/data12/dataset/KITTI/KITTI_Raw/"
     
-    args = parse_args()
+    trainining_fnamelist = "/home/zliu/Desktop/ECCV2024/Ablations/Two_Stage_Processing/datafiles/KITTI/kitti_raw_val.txt"
+    output_json_files = "unet_low_quality.json"
+    contents = read_text_lines(trainining_fnamelist)
     
-    datapath = args.datapath
-    rendered_path = args.rendered_path
-    validation_files = args.validation_files
-    output_json_files = args.output_json_files
+    left_images_psnr_meter = 0
+    right_images_psnr_meter= 0
+    total_images_psnr_meter = 0
+
+    left_images_ssim_meter = 0
+    right_images_ssim_meter= 0
+    total_images_ssim_meter = 0
     
-    basename = os.path.basename(output_json_files)
     
-    saved_output_folder = output_json_files[:-len(basename)]
-    os.makedirs(saved_output_folder,exist_ok=True)
+    
+    for fname in tqdm(contents):
+        
+        # Get GT Left Images and GT Right Images
+        gt_left_images = os.path.join(datapath,fname)
+        gt_right_images = os.path.join(datapath,fname)
+        gt_right_images = gt_right_images.replace("image_02","image_03")
+        assert os.path.exists(gt_left_images)
+        assert os.path.exists(gt_right_images)
+        gt_left_image_data = read_img(gt_left_images)
+        gt_right_image_data = read_img(gt_right_images)
+        
+        gt_left_image_data = gt_left_image_data.astype(np.uint8)
+        gt_right_image_data = gt_right_image_data.astype(np.uint8)
+        
+        
+        basename = os.path.basename(gt_right_images)
+        # get rendered validataion left images
+        rendered_left_from_right = gt_left_images.replace("KITTI_Raw","Temp/Kitti_raw_existed_val/simple_controlnet_resize_max_768")
+        rendered_left_from_right = rendered_left_from_right.replace(basename,"rendered_left_from_right_"+basename)
+        assert os.path.exists(rendered_left_from_right)
+        
+        # get rendered validation right images.
+        rendered_right_from_left = gt_left_images.replace("KITTI_Raw","Temp/Kitti_raw_existed_val/simple_controlnet_resize_max_768/")
+        rendered_right_from_left = rendered_right_from_left.replace(basename,"rendered_right_from_left_"+basename)
+        assert os.path.exists(rendered_right_from_left)
+        
+        
+        rendered_left_from_right_data = read_img(rendered_left_from_right)
+        rendered_right_from_left_data = read_img(rendered_right_from_left)
+        rendered_left_from_right_data = rendered_left_from_right_data.astype(np.uint8)
+        rendered_right_from_left_data = rendered_right_from_left_data.astype(np.uint8)
+        
+        # left image psnr
+        left_psnr_value = compare_psnr(gt_left_image_data,rendered_left_from_right_data)
+        
+        right_psnr_value = compare_psnr(gt_right_image_data,rendered_right_from_left_data)
+        
+        total_psnr = (left_psnr_value + right_psnr_value)/2.0
+        
+        left_images_psnr_meter = left_images_psnr_meter + left_psnr_value
+        right_images_psnr_meter = right_images_psnr_meter + right_psnr_value
+        total_images_psnr_meter = total_images_psnr_meter + total_psnr
+        
+
+        left_image_ssim_value = get_ssim(gt_left_image_data,rendered_left_from_right_data) 
+        right_image_ssim_value = get_ssim(gt_right_image_data,rendered_right_from_left_data)
+        total_image_ssim_value = (left_image_ssim_value+right_image_ssim_value)/2.0
 
         
-    lines = read_text_lines(validation_files)
-    psnr_total =0.0
-    ssim_total = 0.0
+        left_images_ssim_meter = left_images_ssim_meter + left_image_ssim_value
+        right_images_ssim_meter = right_images_ssim_meter + right_image_ssim_value
+        total_images_ssim_meter = total_images_ssim_meter + total_image_ssim_value
+
     
-    for line in tqdm(lines):
-        splits = line.split()
-        left_image = splits[0]
-        right_image_gt = left_image.replace("image_02","image_03")
-        right_image_render = left_image.replace("image_02","image_03")
-        
-        left_image = os.path.join(datapath,left_image)
-        right_image_gt = os.path.join(datapath,right_image_gt)
-        right_image_render = os.path.join(rendered_path,right_image_render)
-        assert os.path.basename(right_image_gt) == os.path.basename(right_image_render)
-        
-        # read the gt right image
-        right_image_gt_data = read_img(right_image_gt).astype(np.uint8)
-        
-        # read the estimated left image
-        right_image_render_data = read_img(right_image_render).astype(np.uint8)
-        
-        
-        # estimate the psnr
-        psnr_value = compare_psnr(right_image_gt_data,right_image_render_data)
-        psnr_total = psnr_total + psnr_value
-        
-        right_image_gt_gray = cv2.cvtColor(right_image_gt_data,cv2.COLOR_RGB2GRAY)
-        right_image_render_gray = cv2.cvtColor(right_image_render_data,cv2.COLOR_RGB2GRAY)
- 
- 
-        # estimate the ssim
-        ssim_value = compare_ssim(right_image_gt_gray,right_image_render_gray)
-        ssim_total = ssim_total + ssim_value
-        
-
-
-    average_psnr_total = psnr_total*1.0/len(lines)
-    average_ssim_total = ssim_total*1.0/len(lines)
+    
+    final_val_left_psnr = round(left_images_psnr_meter/len(contents),4)
+    final_val_right_psnr = round(right_images_psnr_meter/len(contents),4)
+    final_val_total_psnr = round(total_images_psnr_meter/len(contents),4)
+    
+    final_val_left_ssim = round(left_images_ssim_meter/len(contents),4)
+    final_val_right_ssim = round(right_images_ssim_meter/len(contents),4)
+    final_val_total_ssim = round(total_images_ssim_meter/len(contents),4)
+    
+    
+    
+    
     saved_dict = dict()
-    saved_dict['averge_psnr'] = round(average_psnr_total,5)
-    saved_dict['averge_ssim'] = round(average_ssim_total,5)
+    
+    saved_dict['averge_psnr_left'] = final_val_left_psnr
+    saved_dict['averge_psnr_right'] = final_val_right_psnr
+    saved_dict['averge_psnr_total'] = final_val_total_psnr
+    
+    
+    saved_dict['averge_ssim_left'] = final_val_left_ssim
+    saved_dict['averge_ssim_right'] = final_val_right_ssim
+    saved_dict['averge_ssim_total'] = final_val_total_ssim
+    
 
     # Writing JSON data
     with open(output_json_files, 'w') as file:
         json.dump(saved_dict, file, indent=4)
-

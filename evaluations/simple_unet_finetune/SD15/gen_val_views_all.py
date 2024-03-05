@@ -21,8 +21,18 @@ from PIL import Image
 import argparse
 
 from evaluations.eval_dataloader.dataset_configuration import prepare_dataset
-from evaluations.simple_unet_finetune.SD20.evaluation_pipeline import SD20UNet_Validation_Pipeline
+from evaluations.simple_unet_finetune.SD20.evaluation_pipeline_all import SD20UNet_Validation_Pipeline
 import torch.nn.functional as F
+
+from skimage.metrics import structural_similarity as compare_ssim
+from skimage.metrics import peak_signal_noise_ratio as compare_psnr
+import cv2
+
+
+
+
+
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Kitti Inference")
@@ -74,6 +84,19 @@ def parse_args():
         default=4,
         help="Example Image Path",
     )
+    parser.add_argument(
+        "--save_results",
+        action="store_true",
+        help="Whether to saved_results",
+    )
+    parser.add_argument(
+        "--saved_folder",
+        type=str,
+        default="/media/zliu/data12/dataset/KITTI/val/Simple_SD20",
+        help="Whether to saved_results",
+    )
+    
+    
     args = parser.parse_args()    
     return args
     
@@ -97,7 +120,45 @@ def resize_image_to_visualization(tensors,size_tensor):
     return recovered_images_list
     
 
-
+def saved_to_assigned_folders(
+                              args,
+                              name_list,
+                              rendered_left_left_from_left,
+                              rendered_left_from_left,
+                              rendered_right_from_left,
+                              rendered_left_from_right,
+                              rendered_right_from_right,
+                              rendered_right_right_from_right
+                              ):
+    assert len(name_list) == len(rendered_left_left_from_left)
+    for idx in range(len(name_list)):
+        # left image
+        saved_name = name_list[idx]
+        left_left = rendered_left_left_from_left[idx]
+        left_left = (left_left*255.).astype(np.uint8)
+        
+        left_from_right = rendered_left_from_right[idx]
+        left_from_right = (left_from_right*255.).astype(np.uint8)
+        
+        right_from_left = rendered_right_from_left[idx]
+        right_from_left = (right_from_left*255.).astype(np.uint8)
+        
+        right_right = rendered_right_right_from_right[idx]
+        right_right = (right_right*255.).astype(np.uint8)
+        
+        basename = os.path.basename(saved_name)
+        saved_folder = saved_name[:-len(basename)]
+        saved_folder = os.path.join(args.saved_folder,saved_folder)
+        saved_folder_right = saved_folder.replace("image_02","image_03")
+        os.makedirs(saved_folder,exist_ok=True)
+        os.makedirs(saved_folder_right,exist_ok=True)
+        
+        skimage.io.imsave(os.path.join(saved_folder,"left_left_"+basename),left_left)
+        skimage.io.imsave(os.path.join(saved_folder,"left_from_right_"+basename),left_from_right)
+        
+        skimage.io.imsave(os.path.join(saved_folder_right,"right_right_"+basename),right_right)
+        skimage.io.imsave(os.path.join(saved_folder_right,"right_from_left_"+basename),right_from_left)       
+        
 
 def Rendered_Existing_Vals(args):
     device = 'cuda'
@@ -136,11 +197,11 @@ def Rendered_Existing_Vals(args):
     
     
     denosing_steps=32
-    processing_res=768
+    processing_res=512
     match_input_res = True
 
     
-    for idx, sample in enumerate(test_loader):
+    for sample in tqdm(test_loader):
         with torch.no_grad():
             [rendered_left_left_from_left,rendered_left_from_left,rendered_right_from_left,
             rendered_left_from_right,rendered_right_from_right,rendered_right_right_from_right] = pipeline(
@@ -161,8 +222,36 @@ def Rendered_Existing_Vals(args):
             
             
             
+            if args.save_results:
+                saved_to_assigned_folders(
+                                          args,
+                                          sample['left_name'],
+                                          rendered_left_left_from_left,
+                                          rendered_left_from_left,
+                                          rendered_right_from_left,
+                                          rendered_left_from_right,
+                                          rendered_right_from_right,
+                                          rendered_right_right_from_right
+                                          )
+   
+
+            # compute the psnr and ssim here(only for rendered_right_from_left and rendered_left_from_right)
+            left_gt_images = resize_image_to_visualization(sample['left_image'],original_sizes)
+            right_gt_images = resize_image_to_visualization(sample['right_image'],original_sizes)
             
-            print(len(sample['left_name']))
+            
+            # get the psnr and ssim
+            
+            print(len(left_gt_images))
+            print(len(right_gt_images))
+            
+            
+            
+            
+            
+            
+            
+            
 
 
 

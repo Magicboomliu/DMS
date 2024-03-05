@@ -6,6 +6,7 @@ Using Stable Diffusion Model for generating multi-baseline images for autonomous
 - [Simple Unet Fine Tuned-SD15](https://drive.google.com/file/d/1aaKZqYuAZyhNfFENAirgsRCN82A4Ji1r/view?usp=sharing)
 - [Simple Unet Fine-Tuned-SD20](https://drive.google.com/file/d/1ule3EFFqmcdPxtCaiCAkg_amKhFwqm6I/view?usp=sharing)
 
+
 ## Ablation Studies
 (1) Simple UNet Fine-Tuning  
 Descriptions: Simply Fine-Tuned the Unet with prompt of baseline values equals to -0.54, 0, 0.54. Simple concate the reference latent feature with baseline values. Options with Stable Diffusion1.5 and Stable DIffusion2.0.  

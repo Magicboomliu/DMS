@@ -86,7 +86,7 @@ class KITTIRaw_Dataset(Dataset):
             sample = dict()
             
         
-            sample['left_name']= left_image_path.replace("/","_")
+            sample['left_name']= left_image_path
             
             sample['left_image_path'] = os.path.join(datapath,left_image_path)
             sample['right_image_path'] = os.path.join(datapath,right_image_path)
