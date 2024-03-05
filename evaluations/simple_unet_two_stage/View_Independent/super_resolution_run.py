@@ -72,6 +72,12 @@ def main():
         default="Vhey/a-zovya-photoreal-v2",
         help="pretrained  unet model path from hugging face or local dir",
     )
+    parser.add_argument(
+        "--filelist",
+        type=str,
+        default="Vhey/a-zovya-photoreal-v2",
+        help="pretrained  unet model path from hugging face or local dir",
+    )
     
 
     parser.add_argument(
@@ -122,31 +128,41 @@ def main():
     source_folder = args.source_folder
     
     source_folders = find_deepest_folders(source_folder)
-
     
-    for folder in tqdm(source_folders):
-        
-        if len(os.listdir(folder))==0:
-            continue
-        
-        instance_output_folder = folder.replace(args.source_folder,args.output_folder)
+    for sub_folder in source_folders:
+        instance_output_folder = sub_folder.replace(args.source_folder,args.output_folder)
         os.makedirs(instance_output_folder,exist_ok=True)
-
-        '''Doing the Inference at Here'''
-        guided_images = []
-        saved_names = []
-
-        for file in os.listdir(folder):
-            image_path = os.path.join(folder,file)
-            input_left = Image.open(image_path)
-            original_size = input_left.size
-            
-            img_left_left = resize_for_condition_image(input_left)
-            guided_images.append(img_left_left)
-            
-            image_path_enhanced = image_path.replace(args.source_folder,args.output_folder)
-            saved_names.append(image_path_enhanced)
+    
+    
+    lines = read_text_lines(args.filelist)
+    
+    for fname in tqdm(lines):
+        left_fname = os.path.join(args.source_folder,fname)
+        basename = os.path.basename(left_fname)
+        rendered_left_from_right = left_fname.replace(basename,"left_from_right_"+basename)
+        rendered_right_from_left = left_fname.replace(basename,"right_from_left_"+basename)
+        rendered_right_from_left = rendered_right_from_left.replace("image_02","image_03")
         
+        rendered_left_from_right_enhanced = rendered_left_from_right.replace(args.source_folder,args.output_folder)
+        rendered_right_from_left_enhanced = rendered_right_from_left.replace(args.source_folder,args.output_folder)
+        
+        if os.path.exists(rendered_left_from_right) and os.path.exists(rendered_right_from_left) :        
+            '''Doing the Inference at Here'''
+            guided_images = []
+     
+            
+    
+            rendered_left_from_right = Image.open(rendered_left_from_right)
+            original_size = rendered_left_from_right.size
+            rendered_left_from_right = resize_for_condition_image(rendered_left_from_right)
+            guided_images.append(rendered_left_from_right)
+
+            rendered_right_from_left = Image.open(rendered_right_from_left)
+            original_size = rendered_right_from_left.size
+            rendered_right_from_left = resize_for_condition_image(rendered_right_from_left)
+            guided_images.append(rendered_right_from_left)
+            
+            
     
             prompt = ["best quality"] * len(guided_images)
             negative_prompt = ["blur, lowres, bad anatomy, bad hands, cropped, worst quality"] * len(guided_images)
@@ -196,10 +212,9 @@ def main():
     
             resize_results = [data.resize(original_size) for data in result]
 
-            for idx in range(len(resize_results)):
-                saved_name = saved_names[idx]
-                imageio.imsave(saved_name,resize_results[idx])
 
+            imageio.imsave(rendered_left_from_right_enhanced,resize_results[0])
+            imageio.imsave(rendered_right_from_left_enhanced,resize_results[1])
 
 
 
