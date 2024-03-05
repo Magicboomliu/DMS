@@ -25,6 +25,10 @@ Evaluation Code:
 ```
 cd scripts/evaluations/
 sh eval_simple_unet.sh
+
+# For the PSNR and SSIM
+cd scripts/evaluations/
+sh get_psnr_and_ssim
 ```
 
 **(2) Two-Stage: Simple UNet Fine-Tuning + Image Enhancement**  

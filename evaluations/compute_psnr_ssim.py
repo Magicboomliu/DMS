@@ -6,33 +6,69 @@ from tqdm.auto import tqdm
 import os
 import sys
 sys.path.append("../")
-from Dataloader.kitti_io import read_text_lines,read_img
+from dataloader.kitti_io import read_img
+from dataloader.utils import read_text_lines
+
 
 from skimage.metrics import structural_similarity as compare_ssim
 from skimage.metrics import peak_signal_noise_ratio as compare_psnr
 import json
 import cv2
-
 from tqdm import tqdm
-
-
+import argparse
 
 def get_ssim(image1, image2):
     if image1.shape[-1]==3:
         image1 = cv2.cvtColor(image1,cv2.COLOR_RGB2GRAY)
-        image2 = cv2.cvtColor(image2,cv2.COLOR_RGB2GRAY)
-    
+        image2 = cv2.cvtColor(image2,cv2.COLOR_RGB2GRAY)    
     ssim = compare_ssim(image1,image2) + 0.15
-    
     return ssim
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Kitti Inference")
+
+    parser.add_argument(
+        "--datapath",
+        type=str,
+        default="",
+        help="Example Image Path",
+    )
+    parser.add_argument(
+        "--target_datapath",
+        type=str,
+        default="",
+        help="Example Image Path",
+    )
+    parser.add_argument(
+        "--fnamelist",
+        type=str,
+        default='/home/zliu/ACMMM2024/DiffusionMultiBaseline/datafiles/KITTI/kitti_raw_train.txt',
+        help="Example Image Path",
+    )
+    parser.add_argument(
+        "--output_json_path",
+        type=str,
+        default="/home/zliu/ACMMM2024/DiffusionMultiBaseline/datafiles/KITTI/kitti_raw_val.txt",
+        help="Example Image Path",
+    )
+
+    
+    
+    args = parser.parse_args()    
+    return args
+
+
 
 
 if __name__=="__main__":
-    datapath = "/media/zliu/data12/dataset/KITTI/KITTI_Raw/"
     
-    trainining_fnamelist = "/home/zliu/Desktop/ECCV2024/Ablations/Two_Stage_Processing/datafiles/KITTI/kitti_raw_val.txt"
-    output_json_files = "unet_low_quality.json"
-    contents = read_text_lines(trainining_fnamelist)
+    args = parse_args()
+    
+    datapath = args.datapath
+    target_datapath = args.target_datapath
+    fnamelist = args.fnamelist
+    output_json_files = args.output_json_path
+    contents = read_text_lines(fnamelist)
     
     left_images_psnr_meter = 0
     right_images_psnr_meter= 0
@@ -42,8 +78,9 @@ if __name__=="__main__":
     right_images_ssim_meter= 0
     total_images_ssim_meter = 0
     
+
     
-    
+    cnt = 0
     for fname in tqdm(contents):
         
         # Get GT Left Images and GT Right Images
@@ -60,52 +97,59 @@ if __name__=="__main__":
         
         
         basename = os.path.basename(gt_right_images)
-        # get rendered validataion left images
-        rendered_left_from_right = gt_left_images.replace("KITTI_Raw","Temp/Kitti_raw_existed_val/simple_controlnet_resize_max_768")
-        rendered_left_from_right = rendered_left_from_right.replace(basename,"rendered_left_from_right_"+basename)
-        assert os.path.exists(rendered_left_from_right)
         
-        # get rendered validation right images.
-        rendered_right_from_left = gt_left_images.replace("KITTI_Raw","Temp/Kitti_raw_existed_val/simple_controlnet_resize_max_768/")
-        rendered_right_from_left = rendered_right_from_left.replace(basename,"rendered_right_from_left_"+basename)
-        assert os.path.exists(rendered_right_from_left)
+    
+        rendered_left_from_right = fname.replace(basename,"left_from_right_"+basename)
+        rendered_right_from_left = fname.replace(basename,"right_from_left_"+basename)
+        rendered_right_from_left = rendered_right_from_left.replace("image_02","image_03")
         
-        
-        rendered_left_from_right_data = read_img(rendered_left_from_right)
-        rendered_right_from_left_data = read_img(rendered_right_from_left)
-        rendered_left_from_right_data = rendered_left_from_right_data.astype(np.uint8)
-        rendered_right_from_left_data = rendered_right_from_left_data.astype(np.uint8)
-        
-        # left image psnr
-        left_psnr_value = compare_psnr(gt_left_image_data,rendered_left_from_right_data)
-        
-        right_psnr_value = compare_psnr(gt_right_image_data,rendered_right_from_left_data)
-        
-        total_psnr = (left_psnr_value + right_psnr_value)/2.0
-        
-        left_images_psnr_meter = left_images_psnr_meter + left_psnr_value
-        right_images_psnr_meter = right_images_psnr_meter + right_psnr_value
-        total_images_psnr_meter = total_images_psnr_meter + total_psnr
+        rendered_left_from_right = os.path.join(target_datapath,rendered_left_from_right)
+        rendered_right_from_left = os.path.join(target_datapath,rendered_right_from_left)
         
 
-        left_image_ssim_value = get_ssim(gt_left_image_data,rendered_left_from_right_data) 
-        right_image_ssim_value = get_ssim(gt_right_image_data,rendered_right_from_left_data)
-        total_image_ssim_value = (left_image_ssim_value+right_image_ssim_value)/2.0
-
         
-        left_images_ssim_meter = left_images_ssim_meter + left_image_ssim_value
-        right_images_ssim_meter = right_images_ssim_meter + right_image_ssim_value
-        total_images_ssim_meter = total_images_ssim_meter + total_image_ssim_value
+        if os.path.exists(rendered_left_from_right) and os.path.exists(rendered_right_from_left):
+            
+            cnt = cnt + 1
+            rendered_left_from_right_data = read_img(rendered_left_from_right)
+            rendered_right_from_left_data = read_img(rendered_right_from_left)
+            rendered_left_from_right_data = rendered_left_from_right_data.astype(np.uint8)
+            rendered_right_from_left_data = rendered_right_from_left_data.astype(np.uint8)
+            # left image psnr
+            left_psnr_value = compare_psnr(gt_left_image_data,rendered_left_from_right_data)
+            
+            right_psnr_value = compare_psnr(gt_right_image_data,rendered_right_from_left_data)
+            
+            total_psnr = (left_psnr_value + right_psnr_value)/2.0
+            
+            left_images_psnr_meter = left_images_psnr_meter + left_psnr_value
+            right_images_psnr_meter = right_images_psnr_meter + right_psnr_value
+            total_images_psnr_meter = total_images_psnr_meter + total_psnr
+            
+
+            left_image_ssim_value = get_ssim(gt_left_image_data,rendered_left_from_right_data) 
+            right_image_ssim_value = get_ssim(gt_right_image_data,rendered_right_from_left_data)
+            total_image_ssim_value = (left_image_ssim_value+right_image_ssim_value)/2.0
+
+            
+            left_images_ssim_meter = left_images_ssim_meter + left_image_ssim_value
+            right_images_ssim_meter = right_images_ssim_meter + right_image_ssim_value
+            total_images_ssim_meter = total_images_ssim_meter + total_image_ssim_value
+        
+        else:
+            continue
+        
+  
 
     
     
-    final_val_left_psnr = round(left_images_psnr_meter/len(contents),4)
-    final_val_right_psnr = round(right_images_psnr_meter/len(contents),4)
-    final_val_total_psnr = round(total_images_psnr_meter/len(contents),4)
+    final_val_left_psnr = round(left_images_psnr_meter/cnt,4)
+    final_val_right_psnr = round(right_images_psnr_meter/cnt,4)
+    final_val_total_psnr = round(total_images_psnr_meter/cnt,4)
     
-    final_val_left_ssim = round(left_images_ssim_meter/len(contents),4)
-    final_val_right_ssim = round(right_images_ssim_meter/len(contents),4)
-    final_val_total_ssim = round(total_images_ssim_meter/len(contents),4)
+    final_val_left_ssim = round(left_images_ssim_meter/cnt,4)
+    final_val_right_ssim = round(right_images_ssim_meter/cnt,4)
+    final_val_total_ssim = round(total_images_ssim_meter/cnt,4)
     
     
     

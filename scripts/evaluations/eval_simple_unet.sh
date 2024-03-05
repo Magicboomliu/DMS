@@ -53,4 +53,4 @@ python gen_val_views_exist.py \
 
 }
 
-EVAL_SIMPLE_UNET_SD20
+EVAL_SIMPLE_UNET_SD15
