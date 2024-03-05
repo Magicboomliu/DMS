@@ -53,7 +53,13 @@ def main():
         help="pretrained  unet model path from hugging face or local dir",
     )
     parser.add_argument(
-        "--input_image_path",
+        "--input_image_path_folder",
+        type=str,
+        default="images",
+        help="KITTI Folder Path ",
+    ) 
+    parser.add_argument(
+        "--output_image_path_folder",
         type=str,
         default="images",
         help="KITTI Folder Path ",
@@ -102,14 +108,21 @@ def main():
     print("loaded the pretrained model.")
     '''Doing the Inference at Here'''
     guided_images = []
-    input_left = Image.open(args.input_image_path)
-    original_size = input_left.size
+    saved_names = []
     
-    img_left_left = resize_for_condition_image(input_left)
-    guided_images.append(img_left_left)
-    guided_images.append(img_left_left)
-    guided_images.append(img_left_left)
+    images_folder = args.input_image_path_folder
     
+    os.makedirs(args.output_image_path_folder,exist_ok=True)
+    for file in os.listdir(images_folder):
+        image_path = os.path.join(args.input_image_path_folder,file)
+        input_left = Image.open(image_path)
+        original_size = input_left.size
+        
+        img_left_left = resize_for_condition_image(input_left)
+        guided_images.append(img_left_left)
+        basename = os.path.basename(image_path)
+        saved_name = os.path.join(args.output_image_path_folder,basename)
+        saved_names.append(saved_name)
     
     prompt = ["best quality"] * len(guided_images)
     negative_prompt = ["blur, lowres, bad anatomy, bad hands, cropped, worst quality"] * len(guided_images)
@@ -160,21 +173,13 @@ def main():
                 view_batch_size=view_batch_size,
                 circular_padding=True
                 ).images
-    left_data = result[0]
-    resized_left_data= left_data.resize(original_size)
     
-    
-    plt.figure(figsize=(10,15))
-    plt.subplot(2,1,1)
-    plt.axis("off")
-    plt.title("before enhancement")
-    plt.imshow(np.array(input_left))
-    
-    plt.subplot(2,1,2)
-    plt.axis("off")
-    plt.title("after enhancement")
-    plt.imshow(np.array(resized_left_data))
-    plt.show()
+    resize_results = [data.resize(original_size) for data in result]
+
+    for idx in range(len(resize_results)):
+        saved_name = saved_names[idx]
+        imageio.imsave(saved_name,resize_results[idx])
+
 
 
 

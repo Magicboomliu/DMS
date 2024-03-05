@@ -96,8 +96,7 @@ if use_cross_view_att:
     # pipe.controlnet.set_attn_processor(CrossFrameAttnProcessor(video_length=len(guided_images), group_size=5, sub_batch_bmm=sub_batch_bmm))
     pipe.unet.set_attn_processor(CrossFrameAttnProcessor(video_length=len(guided_images), sub_batch_bmm=sub_batch_bmm, prev_cons_frame=prev_cons_frame, aft_cons_frame=aft_cons_frame))
     pipe.controlnet.set_attn_processor(CrossFrameAttnProcessor(video_length=len(guided_images), sub_batch_bmm=sub_batch_bmm, prev_cons_frame=prev_cons_frame, aft_cons_frame=aft_cons_frame))
-    print("OKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKk")
-    print("------------------------------------------------------------------------------")
+
 
 
 else:

@@ -32,5 +32,11 @@ Descriptions: Adopt a two-stage pipeline: First Using the (1) to train a Stable 
 Training Code:  
 
 Inference Code:  
+```
+cd scripts/inference/
+sh infer_two_stage_unet.sh 
+```
+Evaluation Code:
+```
 
-Evaluation Code:  
+```
