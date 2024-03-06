@@ -64,3 +64,10 @@ cd /home/zliu/ACMMM2024/DiffusionMultiBaseline/scripts/train
 sh train_simple_controlnet.sh 
 ```
 
+Inference Code:
+```
+cd scripts/inference/
+sh infer_simple_controlnet.sh
+
+```
+

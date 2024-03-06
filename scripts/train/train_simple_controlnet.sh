@@ -16,7 +16,7 @@ learning_rate=8e-5
 lr_warmup_steps=0
 dataloader_num_workers=4
 tracker_project_name='kitti_tracker_sd20_simple_controlNet'
-unet_pretrained_path="/home/zliu/ACMMM2024/DiffusionMultiBaseline/pretrained_models/Simple_ControlNet"
+unet_pretrained_path="/home/zliu/ACMMM2024/DiffusionMultiBaseline/pretrained_models/Simple_ControlNet/"
 controlnet_model_name_or_path="/home/zliu/ACMMM2024/DiffusionMultiBaseline/pretrained_models/Simple_ControlNet/"
 
 
