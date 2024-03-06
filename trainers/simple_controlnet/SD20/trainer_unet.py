@@ -45,7 +45,7 @@ from transformers.utils import ContextManagers
 import accelerate
 
 import sys
-sys.path.append("..") 
+sys.path.append("../../..") 
 from trainers.simple_controlnet.SD20.dataset_configuration import resize_max_res_tensor,resize_small_res_tensor,random_crop_batch
 from trainers.simple_controlnet.SD20.dataset_configuration import prepare_dataset
 from pipeline.inference_half.SD20_UNet_For_Controlnet_Pipeline import SD20_UNet_For_ControlNet
@@ -60,7 +60,7 @@ logger = get_logger(__name__, log_level="INFO")
 import  matplotlib.pyplot as plt
 
 def log_validation_right2left(vae,text_encoder,tokenizer,unet,args,accelerator,weight_dtype,scheduler,epoch,
-                   input_image_path = "/data1/liu/kitti_raw/KITTI_Raw/2011_09_26/2011_09_26_drive_0001_sync/image_03/data/0000000000.png"
+                   input_image_path = "/home/zliu/ACMMM2024/DiffusionMultiBaseline/input_examples/right_images/example2.png"
                    ):
     
     denoise_steps = 32
@@ -110,10 +110,9 @@ def log_validation_right2left(vae,text_encoder,tokenizer,unet,args,accelerator,w
                           )
         
 
-        
-
+    
 def log_validation_left2right(vae,text_encoder,tokenizer,unet,args,accelerator,weight_dtype,scheduler,epoch,
-                   input_image_path = "/data1/liu/kitti_raw/KITTI_Raw/2011_09_26/2011_09_26_drive_0001_sync/image_02/data/0000000000.png"
+                   input_image_path ="/home/zliu/ACMMM2024/DiffusionMultiBaseline/input_examples/left_images/example2.png"
                    ):
     
     denoise_steps = 32
@@ -177,6 +176,15 @@ def parse_args():
         required=True,
         help="Path to pretrained model or model identifier from huggingface.co/models.",
     )
+    
+    parser.add_argument(
+        "--pretrained_unet",
+        type=str,
+        default=None,
+        required=True,
+        help="Path to pretrained model or model identifier from huggingface.co/models.", 
+    )
+    
 
     parser.add_argument(
         "--dataset_name",
@@ -476,7 +484,7 @@ def main():
         text_encoder = CLIPTextModel.from_pretrained(args.pretrained_model_name_or_path,
                                                      subfolder='text_encoder')
         
-        unet = UNet2DConditionModel.from_pretrained(args.pretrained_model_name_or_path,subfolder="unet",
+        unet = UNet2DConditionModel.from_pretrained(args.pretrained_unet,subfolder="unet",
                                                     in_channels=8, sample_size=96,
                                                     low_cpu_mem_usage=False,
                                                     ignore_mismatched_sizes=True)
@@ -486,7 +494,7 @@ def main():
     text_encoder.requires_grad_(False)
     unet.train() # only make the unet-trainable
     
-
+    
     # using xformers for efficient attentions.
     if args.enable_xformers_memory_efficient_attention:
         if is_xformers_available():
@@ -523,7 +531,6 @@ def main():
 
         accelerator.register_save_state_pre_hook(save_model_hook)
         accelerator.register_load_state_pre_hook(load_model_hook)
-
 
     # using checkpint  for saving the memories
     if args.gradient_checkpointing:
