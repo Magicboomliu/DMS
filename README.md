@@ -70,4 +70,9 @@ cd scripts/inference/
 sh infer_simple_controlnet.sh
 
 ```
+Evaluation Code:
+```
+cd scripts/evaluations
+sh  eval_simple_controlnet.sh
+```
 
