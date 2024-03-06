@@ -28,6 +28,10 @@ from diffusers import (
     DDPMScheduler,
     UNet2DConditionModel,
     AutoencoderKL,
+    ControlNetModel,
+    StableDiffusionPipeline,
+    StableDiffusionControlNetPipeline,
+    DDPMScheduler,
 )
 
 from diffusers.optimization import get_scheduler
@@ -44,23 +48,23 @@ from transformers import CLIPTextModel, CLIPTokenizer
 from transformers.utils import ContextManagers
 import accelerate
 
+
 import sys
 sys.path.append("../../..") 
 from trainers.simple_controlnet.SD20.dataset_configuration import resize_max_res_tensor,resize_small_res_tensor,random_crop_batch
 from trainers.simple_controlnet.SD20.dataset_configuration import prepare_dataset
-from pipeline.inference_half.SD20_UNet_For_Controlnet_Pipeline import SD20_UNet_For_ControlNet
 
+from pipeline.inference_half.SD20_Simple_ControlNet import SimpleControlNet_Pipeline
 from PIL import Image
+
 check_min_version("0.26.0.dev0")
-import skimage.io
-
-
-
 logger = get_logger(__name__, log_level="INFO")
 import  matplotlib.pyplot as plt
 
-def log_validation_right2left(vae,text_encoder,tokenizer,unet,args,accelerator,weight_dtype,scheduler,epoch,
-                   input_image_path = "/home/zliu/ACMMM2024/DiffusionMultiBaseline/input_examples/right_images/example2.png"
+
+def log_validation_left2left_left(vae,text_encoder,tokenizer,unet,args,accelerator,weight_dtype,scheduler,epoch,
+                              controlnet,
+                   input_image_path = "/home/zliu/ACMMM2024/DiffusionMultiBaseline/input_examples/left_images/example2.png"
                    ):
     
     denoise_steps = 32
@@ -70,13 +74,15 @@ def log_validation_right2left(vae,text_encoder,tokenizer,unet,args,accelerator,w
     batch_size = 1
 
     logger.info("Running validation ... ")
-    pipeline = SD20_UNet_For_ControlNet.from_pretrained(pretrained_model_name_or_path=args.pretrained_model_name_or_path,
+    pipeline = SimpleControlNet_Pipeline.from_pretrained(pretrained_model_name_or_path=args.pretrained_model_name_or_path,
                                                    vae=accelerator.unwrap_model(vae),
                                                    text_encoder=accelerator.unwrap_model(text_encoder),
                                                    tokenizer=tokenizer,
                                                    unet = accelerator.unwrap_model(unet),
                                                    safety_checker=None,
+                                                   controlnet = accelerator.unwrap_model(controlnet),
                                                    scheduler = accelerator.unwrap_model(scheduler),
+                                                   
                                                    )
 
     pipeline = pipeline.to(accelerator.device)
@@ -96,23 +102,15 @@ def log_validation_right2left(vae,text_encoder,tokenizer,unet,args,accelerator,w
              match_input_res = match_input_res,
              batch_size = batch_size,
              show_progress_bar = True,
-             text_embed="to left",)
-
-        
-        rendered_right = rendered_right  * 255
-        rendered_right = rendered_right.astype(np.uint8)
-        
-        rendered_example_saved_path = os.path.join(args.output_dir,"sd20_unet_for_controlnet")
-        os.makedirs(rendered_example_saved_path,exist_ok=True)
-        
-        skimage.io.imsave(os.path.join(rendered_example_saved_path,'epoch_{}_rendered_left_from_right_{}'.format(epoch,os.path.basename(input_image_path))),
-                          rendered_right
-                          )
+             text_embed="to left",
+             cond=1)
         
 
-    
+
+
 def log_validation_left2right(vae,text_encoder,tokenizer,unet,args,accelerator,weight_dtype,scheduler,epoch,
-                   input_image_path ="/home/zliu/ACMMM2024/DiffusionMultiBaseline/input_examples/left_images/example2.png"
+                              controlnet,
+                   input_image_path = "/data1/liu/kitti_raw/KITTI_Raw/2011_09_26/2011_09_26_drive_0001_sync/image_02/data/0000000000.png"
                    ):
     
     denoise_steps = 32
@@ -122,13 +120,15 @@ def log_validation_left2right(vae,text_encoder,tokenizer,unet,args,accelerator,w
     batch_size = 1
 
     logger.info("Running validation ... ")
-    pipeline = SD20_UNet_For_ControlNet.from_pretrained(pretrained_model_name_or_path=args.pretrained_model_name_or_path,
+    pipeline = SimpleControlNet_Pipeline.from_pretrained(pretrained_model_name_or_path=args.pretrained_model_name_or_path,
                                                    vae=accelerator.unwrap_model(vae),
                                                    text_encoder=accelerator.unwrap_model(text_encoder),
                                                    tokenizer=tokenizer,
                                                    unet = accelerator.unwrap_model(unet),
                                                    safety_checker=None,
+                                                   controlnet = accelerator.unwrap_model(controlnet),
                                                    scheduler = accelerator.unwrap_model(scheduler),
+                                                   
                                                    )
 
     pipeline = pipeline.to(accelerator.device)
@@ -148,18 +148,104 @@ def log_validation_left2right(vae,text_encoder,tokenizer,unet,args,accelerator,w
              match_input_res = match_input_res,
              batch_size = batch_size,
              show_progress_bar = True,
-             text_embed="to right",)
+             text_embed="to right",
+             cond=1)
+        
+        
 
-        rendered_right = rendered_right  * 255
-        rendered_right = rendered_right.astype(np.uint8)
+
+def log_validation_right2left(vae,text_encoder,tokenizer,unet,args,accelerator,weight_dtype,scheduler,epoch,
+                              controlnet,
+                   input_image_path = "/data1/liu/kitti_raw/KITTI_Raw/2011_09_26/2011_09_26_drive_0001_sync/image_03/data/0000000000.png"
+                   ):
+    
+    denoise_steps = 32
+    ensemble_size = 1
+    processing_res = 768
+    match_input_res = True
+    batch_size = 1
+
+    logger.info("Running validation ... ")
+    pipeline = SimpleControlNet_Pipeline.from_pretrained(pretrained_model_name_or_path=args.pretrained_model_name_or_path,
+                                                   vae=accelerator.unwrap_model(vae),
+                                                   text_encoder=accelerator.unwrap_model(text_encoder),
+                                                   tokenizer=tokenizer,
+                                                   unet = accelerator.unwrap_model(unet),
+                                                   safety_checker=None,
+                                                   controlnet = accelerator.unwrap_model(controlnet),
+                                                   scheduler = accelerator.unwrap_model(scheduler),
+                                                   
+                                                   )
+
+    pipeline = pipeline.to(accelerator.device)
+    try:
+        pipeline.enable_xformers_memory_efficient_attention()
+    except:
+        pass  
+
+    # -------------------- Inference and saving --------------------
+    with torch.no_grad():
         
-        rendered_example_saved_path = os.path.join(args.output_dir,"sd20_unet_for_controlnet")
-        os.makedirs(rendered_example_saved_path,exist_ok=True)
+        input_image_pil_left = Image.open(input_image_path)
+        rendered_right = pipeline(input_image_pil_left,
+             denosing_steps=denoise_steps,
+             ensemble_size= ensemble_size,
+             processing_res = processing_res,
+             match_input_res = match_input_res,
+             batch_size = batch_size,
+             show_progress_bar = True,
+             text_embed="to left",
+             cond=1)
         
-        skimage.io.imsave(os.path.join(rendered_example_saved_path,'epoch_{}_rendered_right_from_left_{}'.format(epoch,os.path.basename(input_image_path))),
-                          rendered_right)
         
+
+def log_validation_right2right(vae,text_encoder,tokenizer,unet,args,accelerator,weight_dtype,scheduler,epoch,
+                              controlnet,
+                   input_image_path = "/data1/liu/kitti_raw/KITTI_Raw/2011_09_26/2011_09_26_drive_0001_sync/image_03/data/0000000000.png"
+                   ):
+    
+    denoise_steps = 32
+    ensemble_size = 1
+    processing_res = 768
+    match_input_res = True
+    batch_size = 1
+
+    logger.info("Running validation ... ")
+    pipeline = SimpleControlNet_Pipeline.from_pretrained(pretrained_model_name_or_path=args.pretrained_model_name_or_path,
+                                                   vae=accelerator.unwrap_model(vae),
+                                                   text_encoder=accelerator.unwrap_model(text_encoder),
+                                                   tokenizer=tokenizer,
+                                                   unet = accelerator.unwrap_model(unet),
+                                                   safety_checker=None,
+                                                   controlnet = accelerator.unwrap_model(controlnet),
+                                                   scheduler = accelerator.unwrap_model(scheduler),
+                                                   
+                                                   )
+
+    pipeline = pipeline.to(accelerator.device)
+    try:
+        pipeline.enable_xformers_memory_efficient_attention()
+    except:
+        pass  
+
+    # -------------------- Inference and saving --------------------
+    with torch.no_grad():
         
+        input_image_pil_left = Image.open(input_image_path)
+        rendered_right = pipeline(input_image_pil_left,
+             denosing_steps=denoise_steps,
+             ensemble_size= ensemble_size,
+             processing_res = processing_res,
+             match_input_res = match_input_res,
+             batch_size = batch_size,
+             show_progress_bar = True,
+             text_embed="to right",
+             cond=1)
+
+
+
+
+
 
 
 def parse_args():
@@ -174,18 +260,23 @@ def parse_args():
         type=str,
         default=None,
         required=True,
-        help="Path to pretrained model or model identifier from huggingface.co/models.",
-    )
-    
+        help="Path to pretrained model or model identifier from huggingface.co/models.", )
+
+
     parser.add_argument(
-        "--pretrained_unet",
+        "--unet_pretrained_path",
         type=str,
         default=None,
         required=True,
-        help="Path to pretrained model or model identifier from huggingface.co/models.", 
+        help="Pretrain path for the unet network.", )
+
+    parser.add_argument(
+        "--controlnet_model_name_or_path",
+        type=str,
+        default=None,
+        help="Path to pretrained model or model identifier of controlnet from huggingface.co/models.",
     )
     
-
     parser.add_argument(
         "--dataset_name",
         type=str,
@@ -198,8 +289,8 @@ def parse_args():
         type=str,
         default="/data1/liu",
         required=True,
-        help="The Root Dataset Path.",
-    )
+        help="The Root Dataset Path.",)
+    
     parser.add_argument(
         "--trainlist",
         type=str,
@@ -298,6 +389,8 @@ def parse_args():
         "--use_8bit_adam", action="store_true", help="Whether or not to use 8-bit Adam from bitsandbytes."
     )
 
+    # using EMA for improving the generalization
+    parser.add_argument("--use_ema", action="store_true", help="Whether to use EMA model.")
 
     # dataloaderes
     parser.add_argument(
@@ -402,17 +495,13 @@ def parse_args():
         help=(
             "The `project_name` argument passed to Accelerator.init_trackers for"
             " more information see https://huggingface.co/docs/accelerate/v0.17.0/en/package_reference/accelerator#accelerate.Accelerator"
-        ),
-    )
+        ),)
 
     # get the local rank
     args = parser.parse_args()
     env_local_rank = int(os.environ.get("LOCAL_RANK", -1))
-    
-    
     if env_local_rank != -1 and env_local_rank != args.local_rank:
         args.local_rank = env_local_rank
-
     # Sanity checks
     if args.dataset_name is None and args.dataset_path is None:
         raise ValueError("Need either a dataset name or a DataPath.")
@@ -421,7 +510,6 @@ def parse_args():
 
 
 def main():
-    
     ''' ------------------------Configs Preparation----------------------------'''
     # give the args parsers
     args = parse_args()
@@ -462,7 +550,7 @@ def main():
     if accelerator.is_main_process:
         if args.output_dir is not None:
             os.makedirs(args.output_dir, exist_ok=True)
-    
+
     ''' ------------------------Non-NN Modules Definition----------------------------'''
     noise_scheduler = DDPMScheduler.from_pretrained(args.pretrained_model_name_or_path,subfolder='scheduler')
     tokenizer = CLIPTokenizer.from_pretrained(args.pretrained_model_name_or_path,subfolder='tokenizer')
@@ -472,7 +560,7 @@ def main():
         """
         returns either a context list that includes one that will disable zero.Init or an empty context list
         """
-        deepspeed_plugin = AcceleratorState().deepspeed_plugin if accelerate.state.is_initialized() else None                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
+        deepspeed_plugin = AcceleratorState().deepspeed_plugin if accelerate.state.is_initialized() else None
         if deepspeed_plugin is None:
             return []
 
@@ -483,17 +571,24 @@ def main():
                                             subfolder='vae')
         text_encoder = CLIPTextModel.from_pretrained(args.pretrained_model_name_or_path,
                                                      subfolder='text_encoder')
-        
-        unet = UNet2DConditionModel.from_pretrained(args.pretrained_unet,subfolder="unet",
-                                                    in_channels=8, sample_size=96,
-                                                    low_cpu_mem_usage=False,
-                                                    ignore_mismatched_sizes=True)
 
+        unet = UNet2DConditionModel.from_pretrained(args.unet_pretrained_path,subfolder="unet",
+                                                    in_channels=8, sample_size=96)
+        logger.info("loadeing pre-trained unet from the checkpoint {}".format(args.unet_pretrained_path),main_process_only=True)
+
+        
+        if args.controlnet_model_name_or_path:
+            logger.info("Loading existing controlnet weights",main_process_only=True)
+            controlnet = ControlNetModel.from_pretrained(args.controlnet_model_name_or_path)
+        else:
+            logger.info("Initializing controlnet weights from unet",main_process_only=True)
+            controlnet = ControlNetModel.from_unet(unet,conditioning_channels=1)
+        
     # Freeze vae and text_encoder and set unet to trainable.
     vae.requires_grad_(False)
     text_encoder.requires_grad_(False)
-    unet.train() # only make the unet-trainable
-    
+    unet.requires_grad_(False) # only make the unet-trainable
+    controlnet.train()
     
     # using xformers for efficient attentions.
     if args.enable_xformers_memory_efficient_attention:
@@ -504,7 +599,7 @@ def main():
                 logger.warn(
                     "xFormers 0.0.16 cannot be used for training in some GPUs. If you observe problems during training, please update xFormers to at least 0.0.17. See https://huggingface.co/docs/diffusers/main/en/optimization/xformers for more details."
                 )
-            unet.enable_xformers_memory_efficient_attention()
+            controlnet.enable_xformers_memory_efficient_attention()
         else:
             raise ValueError("xformers is not available. Make sure it is installed correctly")
 
@@ -513,19 +608,22 @@ def main():
         # create custom saving & loading hooks so that `accelerator.save_state(...)` serializes in a nice format
         def save_model_hook(models, weights, output_dir):
             if accelerator.is_main_process:
-                for i, model in enumerate(models):
-                    model.save_pretrained(os.path.join(output_dir, "unet"))
-                    # make sure to pop weight so that corresponding model is not saved again
+                i = len(weights) - 1
+                while len(weights) > 0:
                     weights.pop()
+                    model = models[i]
+                    sub_dir = "controlnet"
+                    model.save_pretrained(os.path.join(output_dir, sub_dir))
+                    i -= 1
 
         def load_model_hook(models, input_dir):
-                
-            for i in range(len(models)):
+            while len(models) > 0:
                 # pop models so that they are not loaded again
                 model = models.pop()
                 # load diffusers style into model
-                load_model = UNet2DConditionModel.from_pretrained(input_dir, subfolder="unet")
+                load_model = ControlNetModel.from_pretrained(input_dir, subfolder="controlnet")
                 model.register_to_config(**load_model.config)
+
                 model.load_state_dict(load_model.state_dict())
                 del load_model
 
@@ -555,14 +653,17 @@ def main():
     else:
         optimizer_cls = torch.optim.AdamW
 
+    
     # optimizer settings
     optimizer = optimizer_cls(
-        unet.parameters(),
+        controlnet.parameters(),
         lr=args.learning_rate,
         betas=(args.adam_beta1, args.adam_beta2),
         weight_decay=args.adam_weight_decay,
         eps=args.adam_epsilon,
     )
+    
+    
     with accelerator.main_process_first():
         (train_loader,test_loader), num_batches_per_epoch = prepare_dataset(
                                                             datathread=4,
@@ -590,8 +691,9 @@ def main():
     )
 
     # Prepare everything with our `accelerator`.
-    unet, optimizer, train_loader, test_loader,lr_scheduler = accelerator.prepare(
-        unet, optimizer, train_loader, test_loader,lr_scheduler
+    # Prepare everything with our `accelerator`.
+    controlnet, unet, optimizer, train_loader, test_loader,lr_scheduler = accelerator.prepare(
+        controlnet, unet, optimizer, train_loader, test_loader,lr_scheduler
     )
 
     # scale factor.
@@ -609,9 +711,12 @@ def main():
         weight_dtype = torch.bfloat16
         args.mixed_precision = accelerator.mixed_precision
 
+
+
     # Move text_encode and vae to gpu and cast to weight_dtype
     text_encoder.to(accelerator.device, dtype=weight_dtype)
     vae.to(accelerator.device, dtype=weight_dtype)
+    unet.to(accelerator.device, dtype=weight_dtype)
 
 
     # We need to recalculate our total training steps as the size of the training dataloader may have changed.
@@ -679,8 +784,8 @@ def main():
     )
 
     if accelerator.is_main_process:
-        unet.eval()
-        log_validation_right2left(
+        controlnet.eval()
+        log_validation_left2left(
             vae=vae,
             text_encoder=text_encoder,
             tokenizer=tokenizer,
@@ -690,7 +795,8 @@ def main():
             weight_dtype=weight_dtype,
             scheduler=noise_scheduler,
             epoch=0,
-            )
+            controlnet=controlnet  
+        )
         log_validation_left2right(
             vae=vae,
             text_encoder=text_encoder,
@@ -701,15 +807,43 @@ def main():
             weight_dtype=weight_dtype,
             scheduler=noise_scheduler,
             epoch=0,
-            )
+            controlnet=controlnet  
+        )
 
-    # using the epochs to training the model
+        log_validation_right2left(
+            vae=vae,
+            text_encoder=text_encoder,
+            tokenizer=tokenizer,
+            unet=unet,
+            args=args,
+            accelerator=accelerator,
+            weight_dtype=weight_dtype,
+            scheduler=noise_scheduler,
+            epoch=0,
+            controlnet=controlnet  
+        )
+        log_validation_right2right(
+            vae=vae,
+            text_encoder=text_encoder,
+            tokenizer=tokenizer,
+            unet=unet,
+            args=args,
+            accelerator=accelerator,
+            weight_dtype=weight_dtype,
+            scheduler=noise_scheduler,
+            epoch=0,
+            controlnet=controlnet  
+        )
+        
+        
+
+    
+# using the epochs to training the model
     for epoch in range(first_epoch, args.num_train_epochs):
-        unet.train() 
+        controlnet.train() 
         train_loss = 0.0
         for step, batch in enumerate(train_loader):
-            with accelerator.accumulate(unet):
-                
+            with accelerator.accumulate(controlnet):
                 # get the left and right images.
                 left_image_data = batch['left_image'] # left image
                 right_image_data = batch['right_image'] # right pose
@@ -721,10 +855,12 @@ def main():
                 left_image_data_resized = (left_image_data_resized-0.5) *2.0
                 right_image_data_resized = (right_image_data_resized-0.5)*2.0
                 
+                zero_baseline_cond = torch.ones_like(left_image_data_resized).type_as(left_image_data_resized) *0.0
+                zero_baseline_cond = zero_baseline_cond.to(weight_dtype)[:,:1,:,:]
+                full_baseline_cond = torch.ones_like(left_image_data_resized).type_as(left_image_data_resized) *1.0
+                full_baseline_cond = full_baseline_cond.to(weight_dtype)[:,:1,:,:]
                 
-                # random crop on th left image and the right image to 768,768
-                #left_image_data_resized, right_image_data_resized = random_crop_batch(torch.cat([left_image_data_resized, right_image_data_resized]), 768, 768).chunk(2)
-                
+            
                 # encode left RGB to lantents
                 h_rgb = vae.encoder(left_image_data_resized.to(weight_dtype))
                 moments_rgb = vae.quant_conv(h_rgb)
@@ -736,10 +872,13 @@ def main():
                 moments_disp = vae.quant_conv(h_disp)
                 mean_disp, logvar_disp = torch.chunk(moments_disp, 2, dim=1)
                 disp_latents = mean_disp * depth_latent_scale_factor
-    
-                recovered_contents = torch.cat((disp_latents,rgb_latents),dim=0)
-                # left-right-right-left
-                rgb_prompt= torch.cat((rgb_latents,disp_latents),dim=0) #[2B,4,H,W]
+                
+                
+                # left/right/right/left
+                recovered_contents = torch.cat((rgb_latents,disp_latents,disp_latents,rgb_latents),dim=0) #[4B,H,W]
+                
+                # left-right-right-right as prompt
+                rgb_prompt= torch.cat((rgb_latents,rgb_latents,disp_latents,disp_latents),dim=0) #[4B,4,H,W]
                 
 
                 disp_latents = recovered_contents
@@ -782,8 +921,10 @@ def main():
                 # print(text_input_ids.shape)
                 empty_text_embed_to_left = text_encoder(text_input_ids_to_left)[0].to(weight_dtype)
                 
+                # batch size is still 4
+                empty_text_embed = torch.cat((empty_text_embed_to_right,empty_text_embed_to_right,empty_text_embed_to_left,
+                                              empty_text_embed_to_left),dim=0)
                 
-                empty_text_embed = torch.cat((empty_text_embed_to_right,empty_text_embed_to_left),dim=0)
 
                 # Get the target for loss depending on the prediction type
                 if args.prediction_type is not None:
@@ -797,15 +938,34 @@ def main():
                     raise ValueError(f"Unknown prediction type {noise_scheduler.config.prediction_type}")
                 
                 batch_empty_text_embed = empty_text_embed
-
                 
                 unet_input = torch.cat([rgb_latents,noisy_disp_latents], dim=1)  # this order is important: [1,8,H,W]
+                
+                
+
+            
+                # controlnet_cond should be unnormed image
+                controlnet_cond_input = torch.cat((zero_baseline_cond,full_baseline_cond,zero_baseline_cond,full_baseline_cond),dim=0)
+                controlnet_cond_input = controlnet_cond_input.type_as(rgb_latents)
+                
+                
+                down_block_res_samples, mid_block_res_sample = controlnet(
+                    unet_input,
+                    timesteps,
+                    encoder_hidden_states=empty_text_embed,
+                    controlnet_cond=controlnet_cond_input,
+                    return_dict=False,
+                )
+
                 
                 # predict the noise residual
                 noise_pred = unet(unet_input, 
                                   timesteps, 
-                                  encoder_hidden_states=batch_empty_text_embed).sample  # [B, 4, h, w]
-                
+                                  encoder_hidden_states=batch_empty_text_embed,
+                                  down_block_additional_residuals=[sample.to(dtype=weight_dtype) for sample in down_block_res_samples],
+                                  mid_block_additional_residual=mid_block_res_sample.to(dtype=weight_dtype),
+                                  return_dict=False)[0]  # [B, 4, h, w]
+
                 # loss functions
                 loss = F.mse_loss(noise_pred.float(), target.float(), reduction="mean")
                 
@@ -813,10 +973,11 @@ def main():
                 avg_loss = accelerator.gather(loss.repeat(args.train_batch_size)).mean()
                 train_loss += avg_loss.item() / args.gradient_accumulation_steps
                 
-                 # Backpropagate
+                
+                # Backpropagate
                 accelerator.backward(loss)
                 if accelerator.sync_gradients:
-                    accelerator.clip_grad_norm_(unet.parameters(), args.max_grad_norm)
+                    accelerator.clip_grad_norm_(controlnet.parameters(), args.max_grad_norm)
                     
                 optimizer.step()
                 lr_scheduler.step()
@@ -829,9 +990,21 @@ def main():
                 global_step += 1
                 accelerator.log({"train_loss": train_loss}, step=global_step)
                 train_loss = 0.0
-                
-                if global_step % 100 == 0:
-                    if accelerator.is_main_process:
+                if accelerator.is_main_process:
+                    if global_step % 100 == 0:
+                        
+                        log_validation_left2left(
+                            vae=vae,
+                            text_encoder=text_encoder,
+                            tokenizer=tokenizer,
+                            unet=unet,
+                            args=args,
+                            accelerator=accelerator,
+                            weight_dtype=weight_dtype,
+                            scheduler=noise_scheduler,
+                            epoch=0,
+                            controlnet=controlnet  
+                        )
                         log_validation_left2right(
                             vae=vae,
                             text_encoder=text_encoder,
@@ -841,8 +1014,10 @@ def main():
                             accelerator=accelerator,
                             weight_dtype=weight_dtype,
                             scheduler=noise_scheduler,
-                            epoch=epoch
+                            epoch=0,
+                            controlnet=controlnet  
                         )
+
                         log_validation_right2left(
                             vae=vae,
                             text_encoder=text_encoder,
@@ -852,9 +1027,22 @@ def main():
                             accelerator=accelerator,
                             weight_dtype=weight_dtype,
                             scheduler=noise_scheduler,
-                            epoch=epoch
+                            epoch=0,
+                            controlnet=controlnet  
                         )
-                
+                        log_validation_right2right(
+                            vae=vae,
+                            text_encoder=text_encoder,
+                            tokenizer=tokenizer,
+                            unet=unet,
+                            args=args,
+                            accelerator=accelerator,
+                            weight_dtype=weight_dtype,
+                            scheduler=noise_scheduler,
+                            epoch=0,
+                            controlnet=controlnet  
+                        )
+
                 # saving the checkpoints
                 if global_step % args.checkpointing_steps == 0:
                     if accelerator.is_main_process:
@@ -868,16 +1056,23 @@ def main():
                             if len(checkpoints) >= args.checkpoints_total_limit:
                                 num_to_remove = len(checkpoints) - args.checkpoints_total_limit + 1
                                 removing_checkpoints = checkpoints[0:num_to_remove]
+
                                 logger.info(
                                     f"{len(checkpoints)} checkpoints already exist, removing {len(removing_checkpoints)} checkpoints"
                                 )
                                 logger.info(f"removing checkpoints: {', '.join(removing_checkpoints)}")
+
                                 for removing_checkpoint in removing_checkpoints:
                                     removing_checkpoint = os.path.join(args.output_dir, removing_checkpoint)
                                     shutil.rmtree(removing_checkpoint)
 
-                        save_path = os.path.join(args.output_dir, f"checkpoint")
+                        # save_path = os.path.join(args.output_dir, f"checkpoint")
+                        save_path = os.path.join(args.output_dir, f"checkpoint-{global_step}")
+                        # os.removedirs(f'{args.output_dir}/checkpoints*')
+                        
                         accelerator.save_state(save_path)
+                        with open(os.path.join(args.output_dir, f"checkpoint-{global_step}", 'steps.txt'), 'w') as f:
+                            f.writelines(f'Current step: {global_step}')
                         logger.info(f"Saved state to {save_path}")
 
             logs = {"step_loss": loss.detach().item(), "lr": lr_scheduler.get_last_lr()[0]}
@@ -887,11 +1082,9 @@ def main():
             if global_step >= args.max_train_steps:
                 break
         
-    
+        
         if accelerator.is_main_process:
-                
-            # validation inference here
-            log_validation_right2left(
+            log_validation_left2left(
                 vae=vae,
                 text_encoder=text_encoder,
                 tokenizer=tokenizer,
@@ -900,7 +1093,8 @@ def main():
                 accelerator=accelerator,
                 weight_dtype=weight_dtype,
                 scheduler=noise_scheduler,
-                epoch=epoch 
+                epoch=epoch,
+                controlnet=controlnet  
             )
             log_validation_left2right(
                 vae=vae,
@@ -911,14 +1105,40 @@ def main():
                 accelerator=accelerator,
                 weight_dtype=weight_dtype,
                 scheduler=noise_scheduler,
-                epoch=epoch 
+                epoch=epoch,
+                controlnet=controlnet  
             )
-            
 
-            
+            log_validation_right2left(
+                vae=vae,
+                text_encoder=text_encoder,
+                tokenizer=tokenizer,
+                unet=unet,
+                args=args,
+                accelerator=accelerator,
+                weight_dtype=weight_dtype,
+                scheduler=noise_scheduler,
+                epoch=epoch,
+                controlnet=controlnet  
+            )
+            log_validation_right2right(
+                vae=vae,
+                text_encoder=text_encoder,
+                tokenizer=tokenizer,
+                unet=unet,
+                args=args,
+                accelerator=accelerator,
+                weight_dtype=weight_dtype,
+                scheduler=noise_scheduler,
+                epoch=epoch,
+                controlnet=controlnet  
+            )
+
     # Create the pipeline for training and savet
     accelerator.wait_for_everyone()
     accelerator.end_training()
+
+
 
 if __name__=="__main__":
     main()
