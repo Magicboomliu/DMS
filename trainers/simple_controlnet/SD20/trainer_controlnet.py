@@ -60,9 +60,62 @@ from PIL import Image
 check_min_version("0.26.0.dev0")
 logger = get_logger(__name__, log_level="INFO")
 import  matplotlib.pyplot as plt
-
+import skimage.io
 
 def log_validation_left2left_left(vae,text_encoder,tokenizer,unet,args,accelerator,weight_dtype,scheduler,epoch,
+                              controlnet,
+                   input_image_path = "/home/zliu/ACMMM2024/DiffusionMultiBaseline/input_examples/left_images/example2.png"
+                   ):
+    
+    denoise_steps = 32
+    ensemble_size = 1
+    processing_res = 768
+    match_input_res = True
+    batch_size = 1
+
+    logger.info("Running validation ... ")
+    pipeline = SimpleControlNet_Pipeline.from_pretrained(pretrained_model_name_or_path=args.pretrained_model_name_or_path,
+                                                   vae=accelerator.unwrap_model(vae),
+                                                   text_encoder=accelerator.unwrap_model(text_encoder),
+                                                   tokenizer=tokenizer,
+                                                   unet = accelerator.unwrap_model(unet),
+                                                   safety_checker=None,
+                                                   controlnet = accelerator.unwrap_model(controlnet),
+                                                   scheduler = accelerator.unwrap_model(scheduler),
+                                                   )
+    pipeline = pipeline.to(accelerator.device)
+    try:
+        pipeline.enable_xformers_memory_efficient_attention()
+    except:
+        pass  
+
+    # -------------------- Inference and saving --------------------
+    with torch.no_grad():
+        input_image_pil_left = Image.open(input_image_path)
+        rendered_right = pipeline(input_image_pil_left,
+             denosing_steps=denoise_steps,
+             ensemble_size= ensemble_size,
+             processing_res = processing_res,
+             match_input_res = match_input_res,
+             batch_size = batch_size,
+             show_progress_bar = True,
+             text_embed="to left",
+             cond=1)
+        
+        rendered_right = rendered_right  * 255
+        rendered_right = rendered_right.astype(np.uint8)
+        
+        rendered_example_saved_path = os.path.join(args.output_dir,"sd20_simple_controlnet")
+        os.makedirs(rendered_example_saved_path,exist_ok=True)
+        
+        skimage.io.imsave(os.path.join(rendered_example_saved_path,'epoch_{}_rendered_left_left_from_left_{}'.format(epoch,os.path.basename(input_image_path))),
+                          rendered_right
+                          )
+        
+
+
+
+def log_validation_left2right(vae,text_encoder,tokenizer,unet,args,accelerator,weight_dtype,scheduler,epoch,
                               controlnet,
                    input_image_path = "/home/zliu/ACMMM2024/DiffusionMultiBaseline/input_examples/left_images/example2.png"
                    ):
@@ -102,61 +155,24 @@ def log_validation_left2left_left(vae,text_encoder,tokenizer,unet,args,accelerat
              match_input_res = match_input_res,
              batch_size = batch_size,
              show_progress_bar = True,
-             text_embed="to left",
-             cond=1)
-        
-
-
-
-def log_validation_left2right(vae,text_encoder,tokenizer,unet,args,accelerator,weight_dtype,scheduler,epoch,
-                              controlnet,
-                   input_image_path = "/data1/liu/kitti_raw/KITTI_Raw/2011_09_26/2011_09_26_drive_0001_sync/image_02/data/0000000000.png"
-                   ):
-    
-    denoise_steps = 32
-    ensemble_size = 1
-    processing_res = 768
-    match_input_res = True
-    batch_size = 1
-
-    logger.info("Running validation ... ")
-    pipeline = SimpleControlNet_Pipeline.from_pretrained(pretrained_model_name_or_path=args.pretrained_model_name_or_path,
-                                                   vae=accelerator.unwrap_model(vae),
-                                                   text_encoder=accelerator.unwrap_model(text_encoder),
-                                                   tokenizer=tokenizer,
-                                                   unet = accelerator.unwrap_model(unet),
-                                                   safety_checker=None,
-                                                   controlnet = accelerator.unwrap_model(controlnet),
-                                                   scheduler = accelerator.unwrap_model(scheduler),
-                                                   
-                                                   )
-
-    pipeline = pipeline.to(accelerator.device)
-    try:
-        pipeline.enable_xformers_memory_efficient_attention()
-    except:
-        pass  
-
-    # -------------------- Inference and saving --------------------
-    with torch.no_grad():
-        
-        input_image_pil_left = Image.open(input_image_path)
-        rendered_right = pipeline(input_image_pil_left,
-             denosing_steps=denoise_steps,
-             ensemble_size= ensemble_size,
-             processing_res = processing_res,
-             match_input_res = match_input_res,
-             batch_size = batch_size,
-             show_progress_bar = True,
              text_embed="to right",
              cond=1)
+
+        rendered_right = rendered_right  * 255
+        rendered_right = rendered_right.astype(np.uint8)
+        
+        rendered_example_saved_path = os.path.join(args.output_dir,"sd20_simple_controlnet")
+        os.makedirs(rendered_example_saved_path,exist_ok=True)
+        
+        skimage.io.imsave(os.path.join(rendered_example_saved_path,'epoch_{}_rendered_right_from_left_{}'.format(epoch,os.path.basename(input_image_path))),
+                          rendered_right)
         
         
 
 
 def log_validation_right2left(vae,text_encoder,tokenizer,unet,args,accelerator,weight_dtype,scheduler,epoch,
                               controlnet,
-                   input_image_path = "/data1/liu/kitti_raw/KITTI_Raw/2011_09_26/2011_09_26_drive_0001_sync/image_03/data/0000000000.png"
+                   input_image_path = "/home/zliu/ACMMM2024/DiffusionMultiBaseline/input_examples/right_images/example2.png"
                    ):
     
     denoise_steps = 32
@@ -196,12 +212,19 @@ def log_validation_right2left(vae,text_encoder,tokenizer,unet,args,accelerator,w
              show_progress_bar = True,
              text_embed="to left",
              cond=1)
+
+        rendered_right = rendered_right  * 255
+        rendered_right = rendered_right.astype(np.uint8)
+        rendered_example_saved_path = os.path.join(args.output_dir,"sd20_simple_controlnet")
+        os.makedirs(rendered_example_saved_path,exist_ok=True)
+        skimage.io.imsave(os.path.join(rendered_example_saved_path,'epoch_{}_rendered_left_from_right_{}'.format(epoch,os.path.basename(input_image_path))),
+                          rendered_right)
         
         
 
-def log_validation_right2right(vae,text_encoder,tokenizer,unet,args,accelerator,weight_dtype,scheduler,epoch,
+def log_validation_right2right_right(vae,text_encoder,tokenizer,unet,args,accelerator,weight_dtype,scheduler,epoch,
                               controlnet,
-                   input_image_path = "/data1/liu/kitti_raw/KITTI_Raw/2011_09_26/2011_09_26_drive_0001_sync/image_03/data/0000000000.png"
+                   input_image_path = "/home/zliu/ACMMM2024/DiffusionMultiBaseline/input_examples/right_images/example2.png"
                    ):
     
     denoise_steps = 32
@@ -241,6 +264,13 @@ def log_validation_right2right(vae,text_encoder,tokenizer,unet,args,accelerator,
              show_progress_bar = True,
              text_embed="to right",
              cond=1)
+
+        rendered_right = rendered_right  * 255
+        rendered_right = rendered_right.astype(np.uint8)
+        rendered_example_saved_path = os.path.join(args.output_dir,"sd20_simple_controlnet")
+        os.makedirs(rendered_example_saved_path,exist_ok=True)
+        skimage.io.imsave(os.path.join(rendered_example_saved_path,'epoch_{}_rendered_right_right_from_right_{}'.format(epoch,os.path.basename(input_image_path))),
+                          rendered_right)
 
 
 
@@ -276,6 +306,7 @@ def parse_args():
         default=None,
         help="Path to pretrained model or model identifier of controlnet from huggingface.co/models.",
     )
+
     
     parser.add_argument(
         "--dataset_name",
@@ -578,8 +609,9 @@ def main():
 
         
         if args.controlnet_model_name_or_path:
-            logger.info("Loading existing controlnet weights",main_process_only=True)
-            controlnet = ControlNetModel.from_pretrained(args.controlnet_model_name_or_path)
+            logger.info("Loading existing controlnet weights!!",main_process_only=True)
+            controlnet = ControlNetModel.from_pretrained(args.controlnet_model_name_or_path,
+                                                         subfolder='controlnet')
         else:
             logger.info("Initializing controlnet weights from unet",main_process_only=True)
             controlnet = ControlNetModel.from_unet(unet,conditioning_channels=1)
@@ -785,7 +817,7 @@ def main():
 
     if accelerator.is_main_process:
         controlnet.eval()
-        log_validation_left2left(
+        log_validation_left2left_left(
             vae=vae,
             text_encoder=text_encoder,
             tokenizer=tokenizer,
@@ -822,7 +854,7 @@ def main():
             epoch=0,
             controlnet=controlnet  
         )
-        log_validation_right2right(
+        log_validation_right2right_right(
             vae=vae,
             text_encoder=text_encoder,
             tokenizer=tokenizer,
@@ -993,7 +1025,7 @@ def main():
                 if accelerator.is_main_process:
                     if global_step % 100 == 0:
                         
-                        log_validation_left2left(
+                        log_validation_left2left_left(
                             vae=vae,
                             text_encoder=text_encoder,
                             tokenizer=tokenizer,
@@ -1002,7 +1034,7 @@ def main():
                             accelerator=accelerator,
                             weight_dtype=weight_dtype,
                             scheduler=noise_scheduler,
-                            epoch=0,
+                            epoch="lastest",
                             controlnet=controlnet  
                         )
                         log_validation_left2right(
@@ -1014,7 +1046,7 @@ def main():
                             accelerator=accelerator,
                             weight_dtype=weight_dtype,
                             scheduler=noise_scheduler,
-                            epoch=0,
+                            epoch="lastest",
                             controlnet=controlnet  
                         )
 
@@ -1027,10 +1059,10 @@ def main():
                             accelerator=accelerator,
                             weight_dtype=weight_dtype,
                             scheduler=noise_scheduler,
-                            epoch=0,
+                            epoch="lastest",
                             controlnet=controlnet  
                         )
-                        log_validation_right2right(
+                        log_validation_right2right_right(
                             vae=vae,
                             text_encoder=text_encoder,
                             tokenizer=tokenizer,
@@ -1039,7 +1071,7 @@ def main():
                             accelerator=accelerator,
                             weight_dtype=weight_dtype,
                             scheduler=noise_scheduler,
-                            epoch=0,
+                            epoch="lastest",
                             controlnet=controlnet  
                         )
 
@@ -1084,7 +1116,7 @@ def main():
         
         
         if accelerator.is_main_process:
-            log_validation_left2left(
+            log_validation_left2left_left(
                 vae=vae,
                 text_encoder=text_encoder,
                 tokenizer=tokenizer,
@@ -1121,7 +1153,7 @@ def main():
                 epoch=epoch,
                 controlnet=controlnet  
             )
-            log_validation_right2right(
+            log_validation_right2right_right(
                 vae=vae,
                 text_encoder=text_encoder,
                 tokenizer=tokenizer,

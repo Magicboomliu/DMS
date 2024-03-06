@@ -47,7 +47,43 @@ class SimpleControlNet_Pipeline(DiffusionPipeline):
             tokenizer=tokenizer,
         )
         self.empty_text_embed = None
+
         
+    def _resize_max_res(self,img: Image.Image, max_edge_resolution: int) -> Image.Image:
+        """
+        Resize image to limit maximum edge length while keeping aspect ratio.
+        Args:
+            img (`Image.Image`):
+                Image to be resized.
+            max_edge_resolution (`int`):
+                Maximum edge length (pixel).
+        Returns:
+            `Image.Image`: Resized image.
+        """
+        
+        original_width, original_height = img.size
+        
+        downscale_factor = min(
+            max_edge_resolution / original_width, max_edge_resolution / original_height
+        )
+
+        # Calculate new dimensions based on downscale factor
+        new_width = int(original_width * downscale_factor)
+        new_height = int(original_height * downscale_factor)
+        
+        # Adjust dimensions to be multiples of 64
+        # new_width = (new_width // 64) * 64
+        # new_height = (new_height // 64) * 64
+
+        # Check if either dimension is less than max_edge_resolution, adjust if necessary
+        if new_width < max_edge_resolution and new_height < max_edge_resolution:
+            if new_width > new_height:
+                new_width = max_edge_resolution
+            else:
+                new_height = max_edge_resolution
+
+        resized_img = img.resize((new_width, new_height))
+        return resized_img
     
     @torch.no_grad()
     def __call__(self,
@@ -79,10 +115,14 @@ class SimpleControlNet_Pipeline(DiffusionPipeline):
         # --------------- Image Processing ------------------------
         # Resize image
         if processing_res >0:
-            input_image = resize_max_res(
+            input_image = self._resize_max_res(
                 input_image, max_edge_resolution=processing_res
             ) # resize image: for kitti is 231, 768
         
+        # print("--------------------------")
+        # print(input_image.size)
+        # print("------------------------------")
+        # quit()
         
         # Convert the image to RGB, to 1. reomve the alpha channel.
         input_image = input_image.convert("RGB")

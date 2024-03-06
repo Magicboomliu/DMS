@@ -45,8 +45,7 @@ class SD20_UNet_For_ControlNet(DiffusionPipeline):
         )
         self.empty_text_embed = None
         
-        
-        
+
     
     
     @torch.no_grad()
@@ -81,6 +80,7 @@ class SD20_UNet_For_ControlNet(DiffusionPipeline):
             input_image = resize_max_res(
                 input_image, max_edge_resolution=processing_res
             ) # resize image: for kitti is 231, 768
+            
         
         
         # Convert the image to RGB, to 1. reomve the alpha channel.
