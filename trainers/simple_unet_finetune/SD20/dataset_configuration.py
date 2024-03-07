@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 import sys
 sys.path.append("..")
 
-from dataloader.kitti_loader import KITTIRaw_Dataset
+from dataloader_pad.kitti_loader import KITTIRaw_Dataset
 from dataloader import transforms
 import os
 import logging
@@ -31,10 +31,10 @@ def prepare_dataset(datapath,
     
     
     train_dataset = KITTIRaw_Dataset(datapath=datapath,trainlist=trainlist,vallist=vallist,transform=train_transform,
-                                     mode='train')
+                                     mode='train',targetHW = (377,1248))
 
     test_dataset = KITTIRaw_Dataset(datapath=datapath,trainlist=trainlist,vallist=vallist,transform=val_transform,
-                                     mode='test')
+                                     mode='test',targetHW = (377,1248))
 
 
     datathread=datathread

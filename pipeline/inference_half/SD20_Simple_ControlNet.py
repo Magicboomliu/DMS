@@ -18,9 +18,27 @@ from diffusers import (
 from diffusers.utils import BaseOutput
 from transformers import CLIPTextModel, CLIPTokenizer
 
-from utils.image_util import resize_max_res,chw2hwc,colorize_depth_maps
 from utils.colormap import kitti_colormap
 import cv2
+import torch.nn as nn
+import torch
+import torch.nn.functional as F
+
+def resize_max_res_tensor(input_tensor,is_disp=False,recom_resolution=768):
+    assert input_tensor.shape[1]==3
+    original_H, original_W = input_tensor.shape[2:]
+    
+    downscale_factor = min(recom_resolution/original_H,
+                           recom_resolution/original_W)
+    
+    resized_input_tensor = F.interpolate(input_tensor,
+                                         scale_factor=downscale_factor,mode='bilinear',
+                                         align_corners=False)
+    
+    if is_disp:
+        return resized_input_tensor * downscale_factor
+    else:
+        return resized_input_tensor
 
 
 class SimpleControlNet_Pipeline(DiffusionPipeline):
@@ -49,41 +67,20 @@ class SimpleControlNet_Pipeline(DiffusionPipeline):
         self.empty_text_embed = None
 
         
-    def _resize_max_res(self,img: Image.Image, max_edge_resolution: int) -> Image.Image:
-        """
-        Resize image to limit maximum edge length while keeping aspect ratio.
-        Args:
-            img (`Image.Image`):
-                Image to be resized.
-            max_edge_resolution (`int`):
-                Maximum edge length (pixel).
-        Returns:
-            `Image.Image`: Resized image.
-        """
+    def _image_pad(self,image,targetHW):
+        H,W = image.shape[:2]
         
-        original_width, original_height = img.size
+        new_H, new_W = targetHW
+        # 计算填充量
+        pad_bottom = new_H - H  # 底部填充量
+        pad_right = new_W - W  # 右侧填充量
+
+        # 应用填充
+        # numpy.pad的参数是一个元组的序列，每个元组代表一个轴的填充方式，形式为(左侧填充量, 右侧填充量)
+        added_image = np.pad(image, ((0, pad_bottom), (0, pad_right), (0, 0)), 'constant', constant_values=0)
         
-        downscale_factor = min(
-            max_edge_resolution / original_width, max_edge_resolution / original_height
-        )
-
-        # Calculate new dimensions based on downscale factor
-        new_width = int(original_width * downscale_factor)
-        new_height = int(original_height * downscale_factor)
-        
-        # Adjust dimensions to be multiples of 64
-        # new_width = (new_width // 64) * 64
-        # new_height = (new_height // 64) * 64
-
-        # Check if either dimension is less than max_edge_resolution, adjust if necessary
-        if new_width < max_edge_resolution and new_height < max_edge_resolution:
-            if new_width > new_height:
-                new_width = max_edge_resolution
-            else:
-                new_height = max_edge_resolution
-
-        resized_img = img.resize((new_width, new_height))
-        return resized_img
+        return added_image, [H,W]
+    
     
     @torch.no_grad()
     def __call__(self,
@@ -111,26 +108,18 @@ class SimpleControlNet_Pipeline(DiffusionPipeline):
         assert processing_res >=0
         assert denosing_steps >=1
 
-        
-        # --------------- Image Processing ------------------------
-        # Resize image
-        if processing_res >0:
-            input_image = self._resize_max_res(
-                input_image, max_edge_resolution=processing_res
-            ) # resize image: for kitti is 231, 768
-        
-        # print("--------------------------")
-        # print(input_image.size)
-        # print("------------------------------")
-        # quit()
+
         
         # Convert the image to RGB, to 1. reomve the alpha channel.
         input_image = input_image.convert("RGB")
         image = np.array(input_image)
+
+        image_padded, origianl_size = self._image_pad(image=image,
+                                                      targetHW=(377,1248))
         
 
         # Normalize RGB Values.
-        rgb = np.transpose(image,(2,0,1))
+        rgb = np.transpose(image_padded,(2,0,1))
         rgb_norm = rgb / 255.0
         rgb_norm = torch.from_numpy(rgb_norm).to(self.dtype)
         rgb_norm = rgb_norm.to(device)
@@ -140,6 +129,10 @@ class SimpleControlNet_Pipeline(DiffusionPipeline):
         
         assert rgb_norm.min() >= 0.0 and rgb_norm.max() <= 1.0
         rgb_norm = (rgb_norm -0.5) * 2.0
+
+        rgb_norm = rgb_norm.unsqueeze(0)
+        rgb_norm = resize_max_res_tensor(rgb_norm,is_disp=False,recom_resolution=768)
+        rgb_norm = rgb_norm.squeeze(0)
         
 
         # ----------------- predicting depth -----------------
@@ -180,7 +173,10 @@ class SimpleControlNet_Pipeline(DiffusionPipeline):
         # Resize back to original resolution
         if match_input_res:
             # print(depth_pred.shape)
-            depth_pred_left = cv2.resize(depth_pred_left,input_size)
+            
+            depth_pred_left = cv2.resize(depth_pred_left,(1248,377))
+            depth_pred_left = depth_pred_left[:origianl_size[0],:origianl_size[1]]
+            # depth_pred_left
 
         # Clip output range: current size is the original size
         depth_pred_left = depth_pred_left.clip(0, 1)
@@ -242,7 +238,7 @@ class SimpleControlNet_Pipeline(DiffusionPipeline):
             raise NotImplementedError
         
         conditioning = conditioning.half()
-        conditioning = conditioning[:,:1,:224,:]
+        conditioning = conditioning[:,:1,:232,:]
     
         # Batched empty text embedding
         if self.empty_text_embed is None:

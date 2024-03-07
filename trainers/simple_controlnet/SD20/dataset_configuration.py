@@ -6,10 +6,11 @@ from torch.utils.data import DataLoader
 import sys
 sys.path.append("..")
 
-from dataloader.kitti_loader import KITTIRaw_Dataset
+from dataloader_pad.kitti_loader import KITTIRaw_Dataset
 from dataloader import transforms
 import os
 import logging
+
 
 # Get Dataset Here
 def prepare_dataset(datapath,
@@ -30,10 +31,10 @@ def prepare_dataset(datapath,
     
     
     train_dataset = KITTIRaw_Dataset(datapath=datapath,trainlist=trainlist,vallist=vallist,transform=train_transform,
-                                     mode='train')
+                                     mode='train',targetHW = (377,1248))
 
     test_dataset = KITTIRaw_Dataset(datapath=datapath,trainlist=trainlist,vallist=vallist,transform=val_transform,
-                                     mode='test')
+                                     mode='test',targetHW = (377,1248))
 
 
     datathread=datathread
@@ -50,6 +51,8 @@ def prepare_dataset(datapath,
                             pin_memory = True)
     num_batches_per_epoch = len(train_loader)    
     return (train_loader,test_loader),num_batches_per_epoch
+
+
 
 
 def resize_max_res_tensor(input_tensor,is_disp=False,recom_resolution=768):
@@ -72,55 +75,3 @@ def resize_max_res_tensor(input_tensor,is_disp=False,recom_resolution=768):
 def image_normalization(image_tensor):
     image_normalized = image_tensor * 2.0 -1.0
     return image_normalized
-
-def resize_small_res_tensor(input_tensor,is_disp=False, recom_resolution=768):
-    assert input_tensor.shape[1]==3
-    original_H, original_W = input_tensor.shape[2:]
-    
-    downscale_factor = max(recom_resolution/original_H,
-                           recom_resolution/original_W)
-    
-    # Calculate new size
-    new_height, new_width = int(original_H * downscale_factor), int(original_W * downscale_factor)
-
-    # Adjust to make divisible by base
-    # Adjust to make divisible by base
-    base =32
-    new_height = base * round(new_height / base)
-    new_width = base * round(new_width / base)
-    
-    resized_input_tensor = F.interpolate(input_tensor,
-                                         size=(new_height, new_width),mode='bilinear',
-                                         align_corners=False)
-    
-    if is_disp:
-        return resized_input_tensor * downscale_factor
-    else:
-        return resized_input_tensor
-
-def random_crop_batch(batch_tensor, target_height, target_width):
-    """
-    Randomly crops a batch of image tensors to the specified size.
-    
-    Args:
-    batch_tensor (Tensor): The input batch of images with shape [B, C, H, W].
-    target_height (int): The target height of the crop.
-    target_width (int): The target width of the crop.
-
-    Returns:
-    Tensor: The batch of randomly cropped images.
-    """
-    _, _, height, width = batch_tensor.shape
-
-    # Ensure the target size is smaller than the original size
-    if target_height > height or target_width > width:
-        raise ValueError("Target size must be smaller than the original size")
-
-    # Randomly choose the top-left corner of the cropping area
-    top = random.randint(0, height - target_height)
-    left = random.randint(0, width - target_width)
-
-    cropped_tensors = batch_tensor[:, :, top:top + target_height, left:left + target_width]
-
-    # Concatenate all the cropped images along the batch dimension
-    return cropped_tensors

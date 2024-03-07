@@ -51,7 +51,7 @@ import accelerate
 
 import sys
 sys.path.append("../../..") 
-from trainers.simple_controlnet.SD20.dataset_configuration import resize_max_res_tensor,resize_small_res_tensor,random_crop_batch
+from trainers.simple_controlnet.SD20.dataset_configuration import resize_max_res_tensor
 from trainers.simple_controlnet.SD20.dataset_configuration import prepare_dataset
 
 from pipeline.inference_half.SD20_Simple_ControlNet import SimpleControlNet_Pipeline
@@ -64,7 +64,7 @@ import skimage.io
 
 def log_validation_left2left_left(vae,text_encoder,tokenizer,unet,args,accelerator,weight_dtype,scheduler,epoch,
                               controlnet,
-                   input_image_path = "/home/zliu/ACMMM2024/DiffusionMultiBaseline/input_examples/left_images/example2.png"
+                   input_image_path = "/home/zliu/ACMMM2024/DiffusionMultiBaseline/input_examples/left_images/example3.png"
                    ):
     
     denoise_steps = 32
@@ -117,7 +117,7 @@ def log_validation_left2left_left(vae,text_encoder,tokenizer,unet,args,accelerat
 
 def log_validation_left2right(vae,text_encoder,tokenizer,unet,args,accelerator,weight_dtype,scheduler,epoch,
                               controlnet,
-                   input_image_path = "/home/zliu/ACMMM2024/DiffusionMultiBaseline/input_examples/left_images/example2.png"
+                   input_image_path = "/home/zliu/ACMMM2024/DiffusionMultiBaseline/input_examples/left_images/example3.png"
                    ):
     
     denoise_steps = 32
@@ -172,7 +172,7 @@ def log_validation_left2right(vae,text_encoder,tokenizer,unet,args,accelerator,w
 
 def log_validation_right2left(vae,text_encoder,tokenizer,unet,args,accelerator,weight_dtype,scheduler,epoch,
                               controlnet,
-                   input_image_path = "/home/zliu/ACMMM2024/DiffusionMultiBaseline/input_examples/right_images/example2.png"
+                   input_image_path = "/home/zliu/ACMMM2024/DiffusionMultiBaseline/input_examples/right_images/example3.png"
                    ):
     
     denoise_steps = 32
@@ -224,7 +224,7 @@ def log_validation_right2left(vae,text_encoder,tokenizer,unet,args,accelerator,w
 
 def log_validation_right2right_right(vae,text_encoder,tokenizer,unet,args,accelerator,weight_dtype,scheduler,epoch,
                               controlnet,
-                   input_image_path = "/home/zliu/ACMMM2024/DiffusionMultiBaseline/input_examples/right_images/example2.png"
+                   input_image_path = "/home/zliu/ACMMM2024/DiffusionMultiBaseline/input_examples/right_images/example3.png"
                    ):
     
     denoise_steps = 32
@@ -271,8 +271,6 @@ def log_validation_right2right_right(vae,text_encoder,tokenizer,unet,args,accele
         os.makedirs(rendered_example_saved_path,exist_ok=True)
         skimage.io.imsave(os.path.join(rendered_example_saved_path,'epoch_{}_rendered_right_right_from_right_{}'.format(epoch,os.path.basename(input_image_path))),
                           rendered_right)
-
-
 
 
 
