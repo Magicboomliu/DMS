@@ -16,6 +16,7 @@ import json
 import cv2
 from tqdm import tqdm
 import argparse
+import matplotlib.pyplot as plt
 
 def get_ssim(image1, image2):
     if image1.shape[-1]==3:
@@ -106,6 +107,7 @@ if __name__=="__main__":
         rendered_left_from_right = os.path.join(target_datapath,rendered_left_from_right)
         rendered_right_from_left = os.path.join(target_datapath,rendered_right_from_left)
         
+        
 
         
         if os.path.exists(rendered_left_from_right) and os.path.exists(rendered_right_from_left):
@@ -115,12 +117,16 @@ if __name__=="__main__":
             rendered_right_from_left_data = read_img(rendered_right_from_left)
             rendered_left_from_right_data = rendered_left_from_right_data.astype(np.uint8)
             rendered_right_from_left_data = rendered_right_from_left_data.astype(np.uint8)
+            
+
             # left image psnr
             left_psnr_value = compare_psnr(gt_left_image_data,rendered_left_from_right_data)
             
             right_psnr_value = compare_psnr(gt_right_image_data,rendered_right_from_left_data)
             
             total_psnr = (left_psnr_value + right_psnr_value)/2.0
+            print(total_psnr)
+            
             
             left_images_psnr_meter = left_images_psnr_meter + left_psnr_value
             right_images_psnr_meter = right_images_psnr_meter + right_psnr_value

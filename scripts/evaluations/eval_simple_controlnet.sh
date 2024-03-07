@@ -7,7 +7,7 @@ pretrained_unet_path="/home/zliu/ACMMM2024/DiffusionMultiBaseline/pretrained_mod
 pretrained_controlnet="/home/zliu/ACMMM2024/DiffusionMultiBaseline/pretrained_models/Simple_ControlNet/"
 datapath="/media/zliu/data12/dataset/KITTI/KITTI_Raw"
 filelist="/home/zliu/ACMMM2024/DiffusionMultiBaseline/datafiles/KITTI/kitti_raw_val.txt"
-output_folder_path="/media/zliu/data12/dataset/KITTI/val/sd20_simple_controlnet"
+output_folder_path="/media/zliu/data12/dataset/KITTI/val/sd20_simple_controlnet2"
 
 python get_view_exist.py \
   --pretrained_model_name_or_path $pretrained_model_name_or_path \
@@ -42,4 +42,4 @@ python get_view_exist_batch.py \
 
 }
 
-EVAL_CONTROLNET_BATCH
+EVAL_CONTROLNET

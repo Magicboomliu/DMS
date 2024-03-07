@@ -67,20 +67,12 @@ class SimpleControlNet_Pipeline(DiffusionPipeline):
             max_edge_resolution / original_width, max_edge_resolution / original_height
         )
 
-        # Calculate new dimensions based on downscale factor
         new_width = int(original_width * downscale_factor)
         new_height = int(original_height * downscale_factor)
 
-        # Check if either dimension is less than max_edge_resolution, adjust if necessary
-        if new_width < max_edge_resolution and new_height < max_edge_resolution:
-            if new_width > new_height:
-                new_width = max_edge_resolution
-            else:
-                new_height = max_edge_resolution
-        
-        if new_width==768:
-            new_height = 231 
-            
+        new_height = int(round(new_height / 32)) * 32
+        new_width = int(round(new_width / 32)) * 32
+
         resized_img = img.resize((new_width, new_height))
         return resized_img
     

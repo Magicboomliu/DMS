@@ -3,9 +3,9 @@ GET_THE_PSNR_AND_SSIM(){
 cd ../..
 cd /home/zliu/ACMMM2024/DiffusionMultiBaseline/evaluations/
 datapath="/media/zliu/data12/dataset/KITTI/KITTI_Raw/"
-target_datapath="/media/zliu/data12/dataset/KITTI/val/Simple_SD20_Enhanced/"
+target_datapath="/media/zliu/data12/dataset/KITTI/val/sd20_simple_controlnet2/"
 fnamelist='/home/zliu/ACMMM2024/DiffusionMultiBaseline/datafiles/KITTI/kitti_raw_val.txt'
-output_json_path="/home/zliu/ACMMM2024/DiffusionMultiBaseline/outputs/Evaluation_Results/Simple_Unet/Simple_SD20_Enhanced.json"
+output_json_path="/home/zliu/ACMMM2024/DiffusionMultiBaseline/outputs/Evaluation_Results/Simple_Unet/sd2_control2.json"
 
 python compute_psnr_ssim.py \
         --datapath $datapath \

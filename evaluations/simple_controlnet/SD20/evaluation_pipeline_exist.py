@@ -150,47 +150,22 @@ class SimpleControlNet_Pipeline(DiffusionPipeline):
             original_size_list.append(orginal_size)
             
             
-            left_images_batch = torch.cat(processed_images_list_left,dim=0)
-            right_images_batch = torch.cat(processed_images_list_right,dim=0)
+        left_images_batch = torch.cat(processed_images_list_left,dim=0)
+        right_images_batch = torch.cat(processed_images_list_right,dim=0)
             
-            current_batch_size = left_images_batch.shape[0]
-            print(left_images_batch.shape)
-            print(right_images_batch.shape)
-            print(current_batch_size)
+        current_batch_size = left_images_batch.shape[0]
+        
+        left_right_concated = torch.cat((left_images_batch,right_images_batch),dim=0)
+
+        rendered_right_from_left_images_list,rendered_left_from_right_images_list = self.single_infer(
+                                                                        input_rgb=left_right_concated,
+                                                                        num_inference_steps=denosing_steps,
+                                                                        show_pbar=show_progress_bar,
+                                                                        text_embed=text_embed,
+                                                                        cond=cond)
+
         
         quit()
-        
-
-        # ----------------- predicting depth -----------------
-        duplicated_rgb = torch.stack([rgb_norm] * ensemble_size)
-        single_rgb_dataset = TensorDataset(duplicated_rgb)
-        
-        
-        # find the batch size
-        if batch_size>0:
-            _bs = batch_size
-        else:
-            _bs = 1
-        
-        single_rgb_loader = DataLoader(single_rgb_dataset,batch_size=_bs,shuffle=False)
-        
-        
-        if show_progress_bar:
-            iterable_bar = tqdm(
-                single_rgb_loader, desc=" " * 2 + "Inference batches", leave=False
-            )
-        else:
-            iterable_bar = single_rgb_loader
-        
-        for batch in iterable_bar:
-            (batched_image,)= batch  # here the image is still around 0-1
-            depth_pred_raw_left  = self.single_infer(
-                input_rgb=batched_image,
-                num_inference_steps=denosing_steps,
-                show_pbar=show_progress_bar,
-                text_embed=text_embed,
-                cond=cond,
-            )
         
         torch.cuda.empty_cache()  # clear vram cache for ensembling
         depth_pred_left = depth_pred_raw_left.squeeze(0).permute(1,2,0).cpu().numpy().astype(np.float32)
@@ -222,10 +197,23 @@ class SimpleControlNet_Pipeline(DiffusionPipeline):
         )
         text_input_ids = text_inputs.input_ids.to(self.text_encoder.device) #[1,2]
         # print(text_input_ids.shape)
-        self.empty_text_embed = self.text_encoder(text_input_ids)[0].to(self.dtype) #[1,2,1024]
-
-
         
+        empty_text_embed = self.text_encoder(text_input_ids)[0].to(self.dtype) #[1,2,1024]
+
+        return empty_text_embed
+
+
+    def _decode_to_image(self,latent):
+
+        depth_latent_zeros = latent
+        depth_left = self.decode_depth(depth_latent_zeros)
+        depth_left= torch.clip(depth_left, -1.0, 1.0)
+        depth_left = (depth_left + 1.0) / 2.0
+
+        return depth_left
+
+    
+    
     @torch.no_grad()
     def single_infer(self,input_rgb:torch.Tensor,
                      num_inference_steps:int,
@@ -242,29 +230,29 @@ class SimpleControlNet_Pipeline(DiffusionPipeline):
                 
         # encode image
         rgb_latent = self.encode_RGB(input_rgb) # 1/8 Resolution with a channel nums of 4. : this is the prompt
-            
+        
         # Initial depth map (Guassian noise)
         depth_latent = torch.randn(
             rgb_latent.shape, device=device, dtype=self.dtype
         )  # [B, 4, H/8, W/8]
         
-        
+        current_batch_size = depth_latent.shape[0]
+        current_batch_size = current_batch_size//2
+ 
         prompts = rgb_latent
-
-        if cond ==0:
-            conditioning = torch.ones_like(input_rgb).type_as(depth_latent)*0.0
-        elif cond==1:
-            conditioning = torch.ones_like(input_rgb).type_as(depth_latent)*1.0
-        else:
-            raise NotImplementedError
-
+        conditioning = torch.ones_like(input_rgb).type_as(depth_latent)*1.0
         conditioning = conditioning[:,:1,:224,:]
-            
-        self.__encode_contents_text(text_embed)
-                
-        batch_empty_text_embed = self.empty_text_embed.repeat(
-            (rgb_latent.shape[0], 1, 1)
-        )  # [B, 2, 1024]    
+        
+        
+        text_embed_to_right ="to right"
+        text_embed_to_left = "to left"
+        text_prompt_left = self.__encode_contents_text(text_embed_to_right)
+        text_prompt_right = self.__encode_contents_text(text_embed_to_left)
+        
+        text_prompt_left  = text_prompt_left.repeat(current_batch_size,1,1)
+        text_prompt_right = text_prompt_right.repeat(current_batch_size,1,1)
+        text_prompt = torch.cat((text_prompt_left,text_prompt_right),dim=0) #[2*batch_size,4,1024]
+
 
         # Denoising loop
         if show_pbar:
@@ -285,7 +273,7 @@ class SimpleControlNet_Pipeline(DiffusionPipeline):
             down_block_res_samples, mid_block_res_sample = self.controlnet(
                     unet_input,
                     t,
-                    encoder_hidden_states=batch_empty_text_embed,
+                    encoder_hidden_states=text_prompt,
                     controlnet_cond=conditioning,
                     return_dict=False)
             
@@ -293,27 +281,36 @@ class SimpleControlNet_Pipeline(DiffusionPipeline):
             # predict the noise residual
             noise_pred = self.unet(unet_input, 
                                   t, 
-                                  encoder_hidden_states=batch_empty_text_embed,
+                                  encoder_hidden_states=text_prompt,
                                   down_block_additional_residuals=[sample.to(dtype=self.dtype) for sample in down_block_res_samples],
                                   mid_block_additional_residual=mid_block_res_sample.to(dtype=self.dtype),
                                   return_dict=False)[0]  # [B, 4, h, w]
-
-
             # compute the previous noisy sample x_t -> x_t-1
             depth_latent = self.scheduler.step(noise_pred, t, depth_latent).prev_sample
-        
         torch.cuda.empty_cache()
         
+
+        rendered_right_from_left, rendered_left_from_right = torch.chunk(depth_latent,chunks=2,dim=0)
+        rendered_right_from_left_images = self._decode_to_image(rendered_right_from_left)
+        rendered_left_from_right_images = self._decode_to_image(rendered_left_from_right)
         
-        assert depth_latent.shape[0]==1
-        # decode to left
-        depth_latent_zeros = depth_latent
-        depth_left = self.decode_depth(depth_latent_zeros)
-        depth_left= torch.clip(depth_left, -1.0, 1.0)
-        # shift to [0, 1]
-        depth_left = (depth_left + 1.0) / 2.0
+
         
-        return depth_left
+        rendered_right_from_left_images_list = []
+        rendered_left_from_right_images_list = []
+        
+        for new_id in range(rendered_right_from_left_images.shape[0]):
+            rendered_right_from_left_cur = rendered_right_from_left_images[new_id]
+            rendered_right_from_left_cur = rendered_right_from_left_cur.squeeze(0).permute(1,2,0).cpu().numpy()
+            rendered_right_from_left_images_list.append(rendered_right_from_left_cur)
+            
+            
+            rendered_left_from_right_cur = rendered_left_from_right_images[new_id]
+            rendered_left_from_right_cur = rendered_left_from_right_cur.squeeze(0).permute(1,2,0).cpu().numpy()
+            rendered_left_from_right_images_list.append(rendered_left_from_right_cur)
+        
+    
+        return rendered_right_from_left_images_list,rendered_left_from_right_images_list
         
     
     def encode_RGB(self, rgb_in: torch.Tensor) -> torch.Tensor:
