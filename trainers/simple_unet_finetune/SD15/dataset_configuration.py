@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 import sys
 sys.path.append("..")
 
-from dataloader.kitti_loader import KITTIRaw_Dataset
+from dataloader_pad.kitti_loader import KITTIRaw_Dataset
 from dataloader import transforms
 import os
 import logging

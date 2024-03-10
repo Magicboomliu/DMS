@@ -46,7 +46,7 @@ import accelerate
 
 import sys
 sys.path.append("../../..") 
-from trainers.simple_controlnet.SD20.dataset_configuration import resize_max_res_tensor,resize_small_res_tensor,random_crop_batch
+from trainers.simple_controlnet.SD20.dataset_configuration import resize_max_res_tensor
 from trainers.simple_controlnet.SD20.dataset_configuration import prepare_dataset
 from pipeline.inference_half.SD20_UNet_For_Controlnet_Pipeline import SD20_UNet_For_ControlNet
 
@@ -356,7 +356,7 @@ def parse_args():
     parser.add_argument(
         "--checkpointing_steps",
         type=int,
-        default=1000,
+        default=5000,
         help=(
             "Save a checkpoint of the training state every X updates. These checkpoints are only suitable for resuming"
             " training using `--resume_from_checkpoint`."

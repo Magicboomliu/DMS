@@ -3,7 +3,7 @@ SD20_Unet_For_ControlNet(){
 cd ../..
 cd /home/zliu/ACMMM2024/DiffusionMultiBaseline/trainers/simple_controlnet/SD20
 pretrained_model_name_or_path='stabilityai/stable-diffusion-2'
-root_path='/data1/liu/kitti_raw/KITTI_Raw'
+root_path='/media/zliu/data12/dataset/KITTI/KITTI_Raw'
 dataset_name='kitti_raw'
 trainlist='/home/zliu/ACMMM2024/DiffusionMultiBaseline/datafiles/KITTI/kitti_raw_train.txt'
 vallist='/home/zliu/ACMMM2024/DiffusionMultiBaseline/datafiles/KITTI/kitti_raw_val.txt'
