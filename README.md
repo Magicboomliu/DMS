@@ -1,10 +1,12 @@
-# Dependencies 
+# DMB: Improving Self-supervised Stereo Matching using Diffusion-based Multi-Baseline Generation.
+
+## Dependencies 
 ```
 pip install -r requirements.txt
 ```  
 
 
-# Data Preparation  
+## Data Preparation  
 Please download the SceneFlow,KITTI Raw and KITTI 2015&2012 and MPI-Sintel Dataset 
 
 - [SceneFlow](https://lmb.informatik.uni-freiburg.de/resources/datasets/SceneFlowDatasets.en.html) 
@@ -12,9 +14,9 @@ Please download the SceneFlow,KITTI Raw and KITTI 2015&2012 and MPI-Sintel Datas
 - [KITTI 2012 & KITTI 2015](https://www.cvlibs.net/datasets/kitti/eval_scene_flow.php?benchmark=stereo) 
 - [MPI-Sintel](http://sintel.is.tue.mpg.de/) 
 
-# Diffusion-based Multi-baseline Generation
+## Diffusion-based Multi-baseline Generation
 
-## Training of the DMB diffusion Model
+### Training of the DMB diffusion Model
 - Training on the SceneFlow dataset 
 ```
 cd scripts/SF/train 
@@ -33,7 +35,7 @@ cd scripts/SF/train
 sh train_unet.sh
 ``` 
 
-## Inference Multi-Baseline Images
+### Inference Multi-Baseline Images
 - Inference on the SceneFlow dataset
 ```
 
@@ -57,5 +59,7 @@ sh train_unet.sh
 - Inference on MPI-Sintel dataset 
 ```
 ```
+
+
 
 
