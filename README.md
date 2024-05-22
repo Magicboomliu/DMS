@@ -15,6 +15,12 @@ Please download the SceneFlow,KITTI Raw and KITTI 2015&2012 and MPI-Sintel Datas
 - [MPI-Sintel](http://sintel.is.tue.mpg.de/) 
 
 ## Diffusion-based Multi-baseline Generation
+### Pretrained Models(Google Drive)
+- [SceneFlow-DMB](https://drive.google.com/drive/folders/1Yc2RNc8TdwPe84T5cEiYbG8QKAt1p7j-?usp=sharing)
+- [KITTIRaw-DMB](https://drive.google.com/drive/folders/1p1vhvANOeYjGkSfc53O-EEbgKCfc3cN7?usp=sharing)
+- [KITTI2012-DMB](https://drive.google.com/drive/folders/1wFA1QNnQie_hjf-HUnjqJhF0JrCLqBn9?usp=sharing)
+- [KITTI2015-DMB](https://drive.google.com/drive/folders/1yw_Bcy-cLSenJtNh68Jh5HlW0kaz1ola?usp=sharing)
+- [MPI-Sintel-DMB](https://drive.google.com/drive/folders/1ewx0RNsJSjf4NXt8d9Zh9Lnv660zZPOz?usp=sharing)
 
 ### Training of the DMB diffusion Model
 - Training on the SceneFlow dataset 
@@ -59,6 +65,9 @@ sh train_unet.sh
 - Inference on MPI-Sintel dataset 
 ```
 ```
+
+
+
 
 
 
