@@ -44,7 +44,13 @@ sh train_unet.sh
 ### Inference Multi-Baseline Images
 - Inference on the SceneFlow dataset
 ```
+#left to right, right to left inference
+cd scripts/SF/evaluation
+sh evaluation.sh
 
+# get left-left and right-right
+cd scripts/SF/evaluation
+sh get_additional_view.sh
 ```
 
 - Inference on the KITTI Raw dataset 
@@ -65,7 +71,6 @@ sh train_unet.sh
 - Inference on MPI-Sintel dataset 
 ```
 ```
-
 
 
 
