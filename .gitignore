@@ -1,9 +1,6 @@
 *.pth
 *.pt
 *.safetensors
-*.png
-*.jpg
-*.jepg
 *.pyc
 *.cpy
 *.cpython
