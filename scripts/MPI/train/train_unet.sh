@@ -1,10 +1,10 @@
 TRAIN_SIMPLE_UNet(){
-cd ../..
-cd /home/zliu/Desktop/MyLatest/DiffusionMultiBaseline/trainers/simple_unet
+cd ../../..
+cd trainers/MPI
 pretrained_model_name_or_path='stabilityai/stable-diffusion-2'
 root_path='/data1/Sintel/training/'
-trainlist='/home/zliu/Desktop/MyLatest/DiffusionMultiBaseline/datafiles/MPI/MPI_Training.txt'
-output_dir='/home/zliu/Desktop/MyLatest/DiffusionMultiBaseline/outputs/MPI/Simple_UNet'
+trainlist='../../datafiles/MPI/MPI_All.txt'
+output_dir='/data1/Test_Demos'
 train_batch_size=1
 num_train_epochs=100
 gradient_accumulation_steps=16
@@ -12,11 +12,11 @@ learning_rate=2e-5
 lr_warmup_steps=0
 dataloader_num_workers=4
 tracker_project_name='mpi_tracker_simple_unet'
-pretrained_unet="/home/zliu/Desktop/MyLatest/DiffusionMultiBaseline/pretrained_models/checkpoint"
-input_image_path="/home/zliu/Desktop/MyLatest/DiffusionMultiBaseline/input_examples/left_images/example5.png"
+pretrained_unet="../../../Pretrained_Models_For_NeurIPS/Diffusions/MPI/unet/"
+input_image_path="../../input_examples/MPI/left_images/example5.png"
 lr_scheduler="cosine"
 
-CUDA_VISIBLE_DEVICES=0,1,2,3 accelerate launch --mixed_precision="fp16"  trainer_unet.py \
+CUDA_VISIBLE_DEVICES=0,2 accelerate launch --mixed_precision="fp16"  trainer_unet.py \
                   --pretrained_model_name_or_path $pretrained_model_name_or_path \
                    --trainlist $trainlist \
                   --dataset_path $root_path  \

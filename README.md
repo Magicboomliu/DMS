@@ -47,7 +47,7 @@ sh train_kitti12.sh
 
 - Training on the MPI-Sintel dataset 
 ```
-cd scripts/SF/train 
+cd scripts/MPI/train 
 sh train_unet.sh
 ``` 
 
