@@ -66,6 +66,8 @@ def log_validation_right2left(vae,text_encoder,tokenizer,unet,args,accelerator,w
     processing_res = 768
     match_input_res = True
     batch_size = 1
+    input_image_path = input_image_path.replace("left_images","right_images")
+    assert ("right_images" in input_image_path)
 
     logger.info("Running validation ... ")
     pipeline = SimpleUNet_Pipeline_Half.from_pretrained(pretrained_model_name_or_path=args.pretrained_model_name_or_path,
@@ -402,6 +404,18 @@ def parse_args():
         ),
     )
 
+    parser.add_argument(
+        "--input_image_example_path",
+        type=str,
+        default="text2image-fine-tune",
+        help=(
+            "The `project_name` argument passed to Accelerator.init_trackers for"
+            " more information see https://huggingface.co/docs/accelerate/v0.17.0/en/package_reference/accelerator#accelerate.Accelerator"
+        ),
+    )
+
+
+
     # get the local rank
     args = parser.parse_args()
     env_local_rank = int(os.environ.get("LOCAL_RANK", -1))
@@ -683,6 +697,8 @@ def main():
             weight_dtype=weight_dtype,
             scheduler=noise_scheduler,
             epoch=0,
+            input_image_path=args.input_image_example_path
+            
             )
         log_validation_left2right(
             vae=vae,
@@ -694,6 +710,7 @@ def main():
             weight_dtype=weight_dtype,
             scheduler=noise_scheduler,
             epoch=0,
+            input_image_path=args.input_image_example_path
             )
 
     # using the epochs to training the model
@@ -833,7 +850,8 @@ def main():
                             accelerator=accelerator,
                             weight_dtype=weight_dtype,
                             scheduler=noise_scheduler,
-                            epoch=epoch
+                            epoch=epoch,
+                            input_image_path=args.input_image_example_path
                         )
                         log_validation_right2left(
                             vae=vae,
@@ -844,7 +862,8 @@ def main():
                             accelerator=accelerator,
                             weight_dtype=weight_dtype,
                             scheduler=noise_scheduler,
-                            epoch=epoch
+                            epoch=epoch,
+                            input_image_path=args.input_image_example_path
                         )
                 
                 # saving the checkpoints

@@ -31,8 +31,18 @@ sh train_unet.sh
 
 - Training on the KITTI Raw dataset 
 ```
-cd scripts/SF/train 
-sh train_unet.sh
+cd scripts/KITTI/train
+sh train_kitti_raw.sh
+``` 
+- Training on the KITTI 2015 dataset 
+```
+cd scripts/KITTI/train
+sh train_kitti15.sh
+``` 
+- Training on the KITTI 2012 dataset 
+```
+cd scripts/KITTI/train
+sh train_kitti12.sh
 ``` 
 
 - Training on the MPI-Sintel dataset 
@@ -72,7 +82,6 @@ sh unet_generated_new_view.sh
 # get the med-state views
 cd scripts/KITTI/kitti_raw_evaluations
 sh sh unet_generate_med_view.sh
-
 
 ```
 
