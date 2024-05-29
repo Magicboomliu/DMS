@@ -51,6 +51,11 @@ sh evaluation.sh
 # get left-left and right-right
 cd scripts/SF/evaluation
 sh get_additional_view.sh
+
+# get the med-state views
+cd scripts/SF/evaluation
+sh get_middle_view.sh
+
 ```
 
 - Inference on the KITTI Raw dataset 
@@ -71,9 +76,5 @@ sh get_additional_view.sh
 - Inference on MPI-Sintel dataset 
 ```
 ```
-
-
-
-
 
 

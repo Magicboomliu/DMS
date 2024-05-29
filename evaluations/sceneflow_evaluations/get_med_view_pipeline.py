@@ -10,7 +10,7 @@ from diffusers import (
 from transformers import CLIPTextModel, CLIPTokenizer
 
 import sys
-sys.path.append("..")
+sys.path.append("../..")
 
 from tqdm import tqdm
 import os
@@ -98,11 +98,11 @@ def main(args=None):
     fname_list = read_text_lines(filepath=args.input_fname_list)
     fname_list = fname_list[1090:]
     
-    print(args.input_fname_list)
-    for fname in tqdm(fname_list):
-
+    for contents in tqdm(fname_list):
+        
+        splits = contents.split()
+        fname = splits[0]
         left_image_path = os.path.join(args.datapath,fname)
-        print(left_image_path)
         assert os.path.exists(left_image_path)
 
         rendered_center_image_path = os.path.join(args.output_folder_path,fname)
