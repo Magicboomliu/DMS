@@ -10,7 +10,7 @@ from diffusers import (
 from transformers import CLIPTextModel, CLIPTokenizer
 
 import sys
-sys.path.append("..")
+sys.path.append("../..")
 
 from tqdm import tqdm
 import os
@@ -106,25 +106,25 @@ def main(args=None):
         
         saved_name_rendered_left = os.path.join("rendered_left",fname)
         saved_name_renderd_right = os.path.join("rendered_right",fname)
-
         saved_name_rendered_left_left = os.path.join("rendered_left_left",fname)
         saved_name_renderd_right_right = os.path.join("rendered_right_right",fname)
 
-        
+        # saved renderered left
         saved_name_renderd_left_abs = os.path.join(args.datapath,saved_name_rendered_left)
         saved_name_renderd_left_abs_folder = saved_name_renderd_left_abs[:-len(os.path.basename(saved_name_renderd_left_abs))]
         os.makedirs(saved_name_renderd_left_abs_folder,exist_ok=True)
         
+        # saved rendered right
         saved_name_rendered_right_abs = os.path.join(args.datapath,saved_name_renderd_right)
         saved_name_renderd_right_abs_folder = saved_name_rendered_right_abs[:-len(os.path.basename(saved_name_rendered_right_abs))]
         os.makedirs(saved_name_renderd_right_abs_folder,exist_ok=True)
         
-        
+        # saved left-left path
         saved_name_renderd_left_left_abs = os.path.join(args.datapath,saved_name_rendered_left_left)
         saved_name_renderd_left_left_abs_folder = saved_name_renderd_left_left_abs[:-len(os.path.basename(saved_name_renderd_left_left_abs))]
         os.makedirs(saved_name_renderd_left_left_abs_folder,exist_ok=True)
         
-
+        # saved right-right-path
         saved_name_renderd_right_right_abs = os.path.join(args.datapath,saved_name_renderd_right_right)
         saved_name_renderd_right_right_abs_folder = saved_name_renderd_right_right_abs[:-len(os.path.basename(saved_name_renderd_right_right_abs))]
         os.makedirs(saved_name_renderd_right_right_abs_folder,exist_ok=True)

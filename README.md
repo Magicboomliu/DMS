@@ -120,6 +120,13 @@ sh get_middle_view.sh
 ```
 - Inference on MPI-Sintel dataset 
 ```
+# inference on the left-left/right-right/left/right
+cd scripts/MPI/evaluations
+sh eval_unet.sh
+
+# inference on the middle views
+cd scripts/MPI/evaluations
+sh unet_generate_med_view.sh
 ```
 
 
