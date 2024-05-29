@@ -9,7 +9,7 @@ from diffusers import (
 )
 from transformers import CLIPTextModel, CLIPTokenizer
 import sys
-sys.path.append("..")
+sys.path.append("../..")
 from tqdm import tqdm
 import os
 import skimage.io

@@ -89,11 +89,33 @@ sh sh unet_generate_med_view.sh
 
 - Inference on the KITTI 2015 dataset 
 ```
+#left to right, right to left inference
+cd scripts/KITTI/kitti2015_evaluations
+sh unet_eval.sh
+
+# get left-left and right-right
+cd scripts/KITTI/kitti2015_evaluations
+sh get_additional_view.sh
+
+# get the med-state views
+cd scripts/KITTI/kitti2015_evaluations
+sh get_middle_view.sh
 
 ```
 
 - Inference on the KITTI 2012 dataset
 ```
+#left to right, right to left inference
+cd scripts/KITTI/kitti2012_evaluations
+sh unet_eval.sh
+
+# get left-left and right-right
+cd scripts/KITTI/kitti2012_evaluations
+sh get_additional_view.sh
+
+# get the med-state views
+cd scripts/KITTI/kitti2012_evaluations
+sh get_middle_view.sh
 
 ```
 - Inference on MPI-Sintel dataset 
