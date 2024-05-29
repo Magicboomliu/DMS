@@ -1,4 +1,4 @@
-# DMB: Improving Self-supervised Stereo Matching using Diffusion-based Multi-Baseline Generation.
+# DMB: Improving Self-supervised Stereo Matching using Diffusion-Based Multi-Baseline Generation.
 
 ## Dependencies 
 ```
@@ -61,6 +61,18 @@ sh get_middle_view.sh
 - Inference on the KITTI Raw dataset 
 
 ```
+#left to right, right to left inference
+cd scripts/KITTI/kitti_raw_evaluations
+sh eval_unet.sh
+
+# get left-left and right-right
+cd scripts/KITTI/kitti_raw_evaluations
+sh unet_generated_new_view.sh
+
+# get the med-state views
+cd scripts/KITTI/kitti_raw_evaluations
+sh sh unet_generate_med_view.sh
+
 
 ```
 

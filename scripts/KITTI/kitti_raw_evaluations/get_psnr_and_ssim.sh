@@ -12,8 +12,6 @@ python compute_psnr_ssim.py \
         --fnamelist $fnamelist \
         --output_json_path $output_json_path \
         --target_datapath $target_datapath
-
-
 }
 
 GET_THE_PSNR_AND_SSIM

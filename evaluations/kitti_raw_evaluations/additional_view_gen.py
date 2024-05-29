@@ -10,7 +10,7 @@ from diffusers import (
 from transformers import CLIPTextModel, CLIPTokenizer
 
 import sys
-sys.path.append("..")
+sys.path.append("../..")
 
 from tqdm import tqdm
 import os
@@ -19,7 +19,6 @@ import argparse
 import matplotlib.pyplot as plt
 from PIL import Image
 import numpy as np
-
 from pipeline.Kitti_pipeline.inference.Simple_UNet import SimpleUNet_Pipeline
 from dataloader.kitti_dataloader.utils import read_text_lines
 from tqdm import tqdm
@@ -98,69 +97,67 @@ def main(args=None):
     fname_list = read_text_lines(filepath=args.input_fname_list)
     
     for fname in tqdm(fname_list):
-        
-        splits = fname.split()
-        left_fname = splits[0]
-        right_fname = splits[1]
+            
+        left_fname = fname
+        right_fname = left_fname.replace("image_02","image_03")
         
         left_image_path = os.path.join(args.datapath,left_fname)
         right_image_path = os.path.join(args.datapath,right_fname)
-        assert os.path.exists(left_image_path)
-        assert os.path.exists(right_image_path)
         
         rendered_left_image_path = os.path.join(args.output_folder_path,left_fname)
-        rendered_right_image_path = os.path.join(args.output_folder_path,right_fname)
+        rendered_left_left_image_path = rendered_left_image_path.replace("image_02","image_01")
+        rendered_right_right_image_path = rendered_left_left_image_path.replace("image_01","image_04")
+
         
-        basename = os.path.basename(fname)
-        rendered_left_image_folder = rendered_left_image_path[:-len(basename)]
-        rendered_right_image_folder = rendered_right_image_path[:-len(basename)]
+        basename = os.path.basename(left_fname)
+        rendered_left_left_image_folder = rendered_left_left_image_path[:-len(basename)]
+        rendered_right_right_image_folder = rendered_right_right_image_path[:-len(basename)]
         
-        os.makedirs(rendered_left_image_folder,exist_ok=True)
-        os.makedirs(rendered_right_image_folder,exist_ok=True)
-        
+        os.makedirs(rendered_left_left_image_folder,exist_ok=True)
+        os.makedirs(rendered_right_right_image_folder,exist_ok=True)
         
         left_image_pil = Image.open(left_image_path)
         left_image_pil = left_image_pil.convert("RGB")
         right_image_pil = Image.open(right_image_path)
         right_image_pil = right_image_pil.convert("RGB")
+                
         
-        right_image_np = np.array(right_image_pil)
-        left_image_np = np.array(left_image_pil)
-        
-        
-        # render right using the left image
-        rendered_right = pipeline(left_image_pil,
-                denosing_steps=denosing_steps,
-                ensemble_size= 1,
-                processing_res = processing_res,
-                match_input_res = match_input_res,
-                batch_size = batch_size,
-                show_progress_bar = True,
-                text_embed="to right")
+        if os.path.exists(rendered_left_left_image_path):
+            continue
+        else:
+            # render left using the right image
+            rendered_left_left = pipeline(left_image_pil,
+                    denosing_steps=denosing_steps,
+                    ensemble_size= 1,
+                    processing_res = processing_res,
+                    match_input_res = match_input_res,
+                    batch_size = batch_size,
+                    show_progress_bar = True,
+                    text_embed="to left")
 
-        rendered_right = rendered_right  * 255
-        rendered_right = rendered_right.astype(np.uint8)
+            rendered_left_left = rendered_left_left  * 255
+            rendered_left_left = rendered_left_left.astype(np.uint8)
+            skimage.io.imsave(rendered_left_left_image_path,rendered_left_left)
+            
+        if os.path.exists(rendered_right_right_image_path):
+            continue
+        else:        
+            # render right using the left image
+            rendered_right_right = pipeline(right_image_pil,
+                    denosing_steps=denosing_steps,
+                    ensemble_size= 1,
+                    processing_res = processing_res,
+                    match_input_res = match_input_res,
+                    batch_size = batch_size,
+                    show_progress_bar = True,
+                    text_embed="to right")
+
+            rendered_right_right = rendered_right_right  * 255
+            rendered_right_right = rendered_right_right.astype(np.uint8)
+            skimage.io.imsave(rendered_right_right_image_path,rendered_right_right)
         
-    
-        # render left using the right image
-        rendered_left = pipeline(right_image_pil,
-                denosing_steps=denosing_steps,
-                ensemble_size= 1,
-                processing_res = processing_res,
-                match_input_res = match_input_res,
-                batch_size = batch_size,
-                show_progress_bar = True,
-                text_embed="to left")
-
-        rendered_left = rendered_left  * 255
-        rendered_left = rendered_left.astype(np.uint8)
         
         
-        skimage.io.imsave(rendered_right_image_path,rendered_right)
-        skimage.io.imsave(rendered_left_image_path,rendered_left)
-
-
-
 
 if __name__=="__main__":
     

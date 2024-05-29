@@ -13,9 +13,9 @@ lr_warmup_steps=0
 dataloader_num_workers=4
 tracker_project_name='mpi_tracker_simple_unet'
 pretrained_unet="none"
-input_image_path="../..input_examples/SF/left_images/example.png"
+input_image_path="../../input_examples/SF/left_images/example.png"
 
-CUDA_VISIBLE_DEVICES=0,1,2,3 accelerate launch --mixed_precision="fp16"  trainer_unet.py \
+CUDA_VISIBLE_DEVICES=0,2 accelerate launch --mixed_precision="fp16"  trainer_unet.py \
                   --pretrained_model_name_or_path $pretrained_model_name_or_path \
                    --trainlist $trainlist \
                   --dataset_path $root_path  \

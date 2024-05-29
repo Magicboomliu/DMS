@@ -10,7 +10,7 @@ from diffusers import (
 from transformers import CLIPTextModel, CLIPTokenizer
 
 import sys
-sys.path.append("..")
+sys.path.append("../..")
 
 from tqdm import tqdm
 import os
@@ -99,12 +99,14 @@ def main(args=None):
     
     for fname in tqdm(fname_list):
         
-        splits = fname.split()
-        left_fname = splits[0]
-        right_fname = splits[1]
+        left_fname = fname
+        right_fname = left_fname.replace("image_02","image_03")
         
         left_image_path = os.path.join(args.datapath,left_fname)
         right_image_path = os.path.join(args.datapath,right_fname)
+        
+        print(left_image_path)
+        
         assert os.path.exists(left_image_path)
         assert os.path.exists(right_image_path)
         

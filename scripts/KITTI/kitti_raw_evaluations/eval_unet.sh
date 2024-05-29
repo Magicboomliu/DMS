@@ -1,14 +1,14 @@
 EVAL_UNet_KITTI(){
-cd ../..
-cd /home/zliu/Desktop/BMCV2024/evaluations
+cd ../../..
+cd evaluations/kitti_raw_evaluations
 pretrained_model_name_or_path="stabilityai/stable-diffusion-2"
-pretrained_unet_path="{KITTI_CheckPoint_PATH}"
-datapath="Your KITTI RAW PATH"
-input_fname_list="/home/zliu/Desktop/BMCV2024/datafiles/KITTI/kitti_raw_val.txt"
-output_folder_path="/data1/KITTI/Rendered_Results/Simple_UNet/KITTI_Validation"
+pretrained_unet_path="../../../Pretrained_Models_For_NeurIPS/Diffusions/KITTI_Raw/unet/"
+datapath="/data1/KITTI/KITTI_Raw/"
+input_fname_list="../../datafiles/KITTI/KITTI_raw/kitti_raw_val.txt"
+output_folder_path="/data1/KITTI/Rendered_Results/DEMO"
 
 
-python unet_evaluate_pipeline.py \
+python existing_view_gen.py \
         --pretrained_model_name_or_path $pretrained_model_name_or_path \
         --pretrained_unet_path $pretrained_unet_path \
         --datapath $datapath \
