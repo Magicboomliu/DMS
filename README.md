@@ -1,5 +1,7 @@
 # DMB: Improving Self-supervised Stereo Matching using Diffusion-Based Multi-Baseline Generation.
 
+![extented_view_on_kitti](./figures/teaser02.png)
+
 ## Dependencies 
 ```
 pip install -r requirements.txt
