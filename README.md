@@ -124,7 +124,7 @@ sh get_middle_view.sh
 cd scripts/MPI/evaluations
 sh eval_unet.sh
 
-# inference on the middle views
+# inference on the middle state views
 cd scripts/MPI/evaluations
 sh unet_generate_med_view.sh
 ```
