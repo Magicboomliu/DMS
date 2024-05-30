@@ -52,6 +52,12 @@ cd SF/scripts
 sh ablation_train_sf.sh
 
 ```
+- MPI Dataset
+```
+cd MPI/scripts
+sh train_MPI_hf.sh
+
+```
 
 
 ## Inference Scripts
@@ -69,6 +75,14 @@ sh evaluation_kitti2012_2015.sh
 
 ```
 cd SF/scripts
+sh evaluation.sh
+
+```
+
+- MPI Dataset
+
+```
+cd MPI/scripts
 sh evaluation.sh
 
 ```
