@@ -9,7 +9,7 @@ pip install -r requirements.txt
 
 ## Pretrainde Models
 
--[MonoDepth2](https://drive.google.com/file/d/10P3Xyv396ox_Akj5_s7SN50pxG2EoENA/view?usp=sharing) 
+- [MonoDepth2](https://drive.google.com/file/d/10P3Xyv396ox_Akj5_s7SN50pxG2EoENA/view?usp=sharing) 
 
 
 ## Training 
