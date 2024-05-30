@@ -45,6 +45,13 @@ sh ablations_kitti2015.sh
 
 sh ablations_kitti2012.sh
 ```
+- SceneFlow Dataset
+```
+cd SF/scripts
+
+sh ablation_train_sf.sh
+
+```
 
 
 ## Inference Scripts
@@ -52,11 +59,19 @@ sh ablations_kitti2012.sh
 
 ### Ablation Studies Inference Scripts
 
+- KITTI Dataset
 ```
 cd KITTI/scripts/
 sh evaluation_kitti2012_2015.sh
 
 ```
+- SceneFlow Dataset
+
+```
+cd SF/scripts
+sh evaluation.sh
+
+``
 
 ### KITTI 2015 Testing Set Submission
 
