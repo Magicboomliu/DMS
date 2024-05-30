@@ -1,0 +1,1 @@
+python train_multi.py --model_name stereo_model --frame_ids 0 --use_stereo --split eigen_full --png
