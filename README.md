@@ -1,6 +1,5 @@
 # DMB: Improving Self-supervised Stereo Matching using Diffusion-Based Multi-Baseline Generation.
-
-![extented_view_on_kitti](./figures/teaser02.png)
+## Training of Self-Supervised Stereo Matching Networks
 
 ## Dependencies 
 ```
@@ -16,117 +15,53 @@ Please download the SceneFlow,KITTI Raw and KITTI 2015&2012 and MPI-Sintel Datas
 - [KITTI 2012 & KITTI 2015](https://www.cvlibs.net/datasets/kitti/eval_scene_flow.php?benchmark=stereo) 
 - [MPI-Sintel](http://sintel.is.tue.mpg.de/) 
 
-## Diffusion-based Multi-baseline Generation
-### Pretrained Models(Google Drive)
-- [SceneFlow-DMB](https://drive.google.com/drive/folders/1Yc2RNc8TdwPe84T5cEiYbG8QKAt1p7j-?usp=sharing)
-- [KITTIRaw-DMB](https://drive.google.com/drive/folders/1p1vhvANOeYjGkSfc53O-EEbgKCfc3cN7?usp=sharing)
-- [KITTI2012-DMB](https://drive.google.com/drive/folders/1wFA1QNnQie_hjf-HUnjqJhF0JrCLqBn9?usp=sharing)
-- [KITTI2015-DMB](https://drive.google.com/drive/folders/1yw_Bcy-cLSenJtNh68Jh5HlW0kaz1ola?usp=sharing)
-- [MPI-Sintel-DMB](https://drive.google.com/drive/folders/1ewx0RNsJSjf4NXt8d9Zh9Lnv660zZPOz?usp=sharing)
+## Pretrained Models
+### (1) Ablation Stuides Pre-Trained Models(Google Drive)
+#### Baseline Models is [PASMnet](https://github.com/The-Learning-And-Vision-Atelier-LAVA/PAM). IEEE TPAMI 2020(Parallax Attention for Unsupervised Stereo Correspondence Learning).  
 
-### Training of the DMB diffusion Model
-- Training on the SceneFlow dataset 
+- [SceneFlow Pretrained Models](https://drive.google.com/drive/folders/1EIit3SgUSAFtTAlmd555CZ0zuZg6ishY?usp=sharing)
+- [KITTI2015 Pretrained Models](https://drive.google.com/drive/folders/1lS5kN06nacaGDCGvDLu76uuVGbTUv6id?usp=sharing)
+- [KITTI2012 Pretrained Models](https://drive.google.com/drive/folders/1xNiLjIRm0LYGFx-YGehPMSo9V2jA3XNr?usp=sharing)
+- [MPI Pretrained Models](https://drive.google.com/drive/folders/1grFP_GOqyAzJqZw3rdm9CkR1avqgMWjN?usp=sharing)  
+
+### (2) Models for KITTI 2015 Submission(Google Drive) 
+- [PASMnet](https://drive.google.com/drive/folders/1scRa3TxjeaiOb5HCTdV8g3oy6pz3ENwE?usp=sharing)
+- [CFNet](https://drive.google.com/drive/folders/1scRa3TxjeaiOb5HCTdV8g3oy6pz3ENwE?usp=sharing) 
+- [StereoNet](https://drive.google.com/drive/folders/1scRa3TxjeaiOb5HCTdV8g3oy6pz3ENwE?usp=sharing)
+
+
+## Training Scripts
+
+### Ablation Studies Trainig Scripts
+- KITTI 2012 & 2015 dataset
 ```
-cd scripts/SF/train 
-sh train_unet.sh
-``` 
+cd KITTI/scripts/
 
-- Training on the KITTI Raw dataset 
-```
-cd scripts/KITTI/train
-sh train_kitti_raw.sh
-``` 
-- Training on the KITTI 2015 dataset 
-```
-cd scripts/KITTI/train
-sh train_kitti15.sh
-``` 
-- Training on the KITTI 2012 dataset 
-```
-cd scripts/KITTI/train
-sh train_kitti12.sh
-``` 
+# Train KITTI2015(Modify for which experiments inside the scripts)  
 
-- Training on the MPI-Sintel dataset 
-```
-cd scripts/MPI/train 
-sh train_unet.sh
-``` 
+sh ablations_kitti2015.sh
 
-### Inference Multi-Baseline Images
-- Inference on the SceneFlow dataset
-```
-#left to right, right to left inference
-cd scripts/SF/evaluation
-sh evaluation.sh
+# Train KITTI2012(Modify for which experiments inside the scripts)  
 
-# get left-left and right-right
-cd scripts/SF/evaluation
-sh get_additional_view.sh
-
-# get the med-state views
-cd scripts/SF/evaluation
-sh get_middle_view.sh
-
-```
-
-- Inference on the KITTI Raw dataset 
-
-```
-#left to right, right to left inference
-cd scripts/KITTI/kitti_raw_evaluations
-sh eval_unet.sh
-
-# get left-left and right-right
-cd scripts/KITTI/kitti_raw_evaluations
-sh unet_generated_new_view.sh
-
-# get the med-state views
-cd scripts/KITTI/kitti_raw_evaluations
-sh sh unet_generate_med_view.sh
-
-```
-
-- Inference on the KITTI 2015 dataset 
-```
-#left to right, right to left inference
-cd scripts/KITTI/kitti2015_evaluations
-sh unet_eval.sh
-
-# get left-left and right-right
-cd scripts/KITTI/kitti2015_evaluations
-sh get_additional_view.sh
-
-# get the med-state views
-cd scripts/KITTI/kitti2015_evaluations
-sh get_middle_view.sh
-
-```
-
-- Inference on the KITTI 2012 dataset
-```
-#left to right, right to left inference
-cd scripts/KITTI/kitti2012_evaluations
-sh unet_eval.sh
-
-# get left-left and right-right
-cd scripts/KITTI/kitti2012_evaluations
-sh get_additional_view.sh
-
-# get the med-state views
-cd scripts/KITTI/kitti2012_evaluations
-sh get_middle_view.sh
-
-```
-- Inference on MPI-Sintel dataset 
-```
-# inference on the left-left/right-right/left/right
-cd scripts/MPI/evaluations
-sh eval_unet.sh
-
-# inference on the middle state views
-cd scripts/MPI/evaluations
-sh unet_generate_med_view.sh
+sh ablations_kitti2012.sh
 ```
 
 
+## Inference Scripts
+
+
+### Ablation Studies Inference Scripts
+
+```
+cd KITTI/scripts/
+sh evaluation_kitti2012_2015.sh
+
+```
+
+### KITTI 2015 Testing Set Submission
+
+```
+cd KITTI/scripts/
+sh submission_kitti2015.sh
+
+```

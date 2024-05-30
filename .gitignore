@@ -12,3 +12,4 @@ outputs
 logs
 *.zip
 *.tar
+output*
