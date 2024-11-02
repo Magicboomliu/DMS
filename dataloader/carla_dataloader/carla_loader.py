@@ -9,6 +9,7 @@ from dataloader.carla_dataloader.carla_io import  read_img
 from dataloader.carla_dataloader.utils import read_text_lines
 import numpy as np
 import cv2
+from scipy.ndimage import zoom
 
 
 def image_pad(image,targetHW):
@@ -30,6 +31,12 @@ def resize_image(image, target_resolution):
     return resized_image
 
 
+def resize_depth(image,target_resolution):
+    
+    resized_image = cv2.resize(image, target_resolution, interpolation=cv2.INTER_LINEAR)
+    
+    return resized_image
+
 
 class CARLA_MV_Dataset(Dataset):
     def __init__(self,
@@ -38,7 +45,7 @@ class CARLA_MV_Dataset(Dataset):
                  vallist,
                  mode='train',
                  transform=None,
-                 targetHW = (384,1248),
+                 targetHW = (1920,1080),
                  use_depth = True,
                  save_filename=False):
         
@@ -60,6 +67,8 @@ class CARLA_MV_Dataset(Dataset):
             'val': self.vallist,
             "test": self.vallist
         }
+        
+
         
         self.samples  =[]
         lines = read_text_lines(dataset_dict[mode])
@@ -117,15 +126,18 @@ class CARLA_MV_Dataset(Dataset):
             sample['right_image'] = resize_image(sample['right_image'],target_resolution=self.train_resolution)
             sample['mid_image'] = resize_image(sample['mid_image'],target_resolution=self.train_resolution)
 
-        
         # read the depth
         if self.use_depth:
             sample['left_depth'] = np.load(sample_path['depth_left_path'])
             sample['right_depth'] = np.load(sample_path['depth_right_path'])
             sample['mid_depth'] = np.load(sample_path['depth_mid_path'])
+
+            if self.train_resolution is not None:
+                sample['left_depth'] = resize_depth(sample['left_depth'],target_resolution=self.train_resolution)
+                sample['right_depth'] = resize_depth(sample['right_depth'],target_resolution=self.train_resolution)
+                sample['mid_depth'] = resize_depth(sample['mid_depth'],target_resolution=self.train_resolution)
             
         
-    
         fov = 90        # default setting for carla
         focal_length = 1920 / (2.0 * np.tan(fov * np.pi / 360.0))
         baseline_left_to_right = 2.0       # in terms of meter
@@ -140,19 +152,12 @@ class CARLA_MV_Dataset(Dataset):
         sample['baseline_left2right'] = baseline_left_to_right
         sample['baseline_left2mid'] = baseline_left_to_middle
         sample['baseline_mid2right'] = baseline_right_to_middle
-        
-
-    
+            
         if self.transform is not None:
             sample = self.transform(sample)
         
-        
-        
         return sample
         
-
-
-
     def __len__(self):
         return len(self.samples)
 
