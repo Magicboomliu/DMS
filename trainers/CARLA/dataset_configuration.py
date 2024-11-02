@@ -93,7 +93,7 @@ if __name__=="__main__":
                                                                        vallist=vallist,
                                                                        logger=None,
                                                                        batch_size=1,test_size=1,
-                                                                       targetHW=(1980,1080),
+                                                                       targetHW=(1920,1080),
                                                                        datathread=4)
     
     # train dataloader

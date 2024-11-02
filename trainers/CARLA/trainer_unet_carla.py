@@ -1,12 +1,10 @@
 import argparse
 import math
 import random
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.checkpoint
-
 import os
 import logging
 import tqdm
@@ -46,119 +44,15 @@ import accelerate
 
 import sys
 sys.path.append("../..") 
-from trainers.KITTI.dataset_configuration import prepare_dataset
-from pipeline.Kitti_pipeline.inference_half.simple_unet_pipeline_half import SimpleUNet_Pipeline_Half
-
-
+from trainers.CARLA.dataset_configuration import prepare_dataset
 from PIL import Image
 check_min_version("0.26.0.dev0")
 import skimage.io
-
 logger = get_logger(__name__, log_level="INFO")
 import  matplotlib.pyplot as plt
 
-def log_validation_right2left(vae,text_encoder,tokenizer,unet,args,accelerator,weight_dtype,scheduler,epoch,
-                   input_image_path = ""
-                   ):
-    
-    denoise_steps = 32
-    ensemble_size = 1
-    processing_res = 768
-    match_input_res = True
-    batch_size = 1
-    input_image_path = input_image_path.replace("left_images","right_images")
-    assert ("right_images" in input_image_path)
+from pipeline.CARLA_pipeline.inference_half.simple_unet_pipeline_half import SimpleUNet_Pipeline_Half
 
-    logger.info("Running validation ... ")
-    pipeline = SimpleUNet_Pipeline_Half.from_pretrained(pretrained_model_name_or_path=args.pretrained_model_name_or_path,
-                                                   vae=accelerator.unwrap_model(vae),
-                                                   text_encoder=accelerator.unwrap_model(text_encoder),
-                                                   tokenizer=tokenizer,
-                                                   unet = accelerator.unwrap_model(unet),
-                                                   safety_checker=None,
-                                                   scheduler = accelerator.unwrap_model(scheduler),
-                                                   )
-
-    pipeline = pipeline.to(accelerator.device)
-    try:
-        pipeline.enable_xformers_memory_efficient_attention()
-    except:
-        pass  
-
-    # -------------------- Inference and saving --------------------
-    with torch.no_grad():
-        
-        input_image_pil_left = Image.open(input_image_path)
-        rendered_right = pipeline(input_image_pil_left,
-             denosing_steps=denoise_steps,
-             ensemble_size= ensemble_size,
-             processing_res = processing_res,
-             match_input_res = match_input_res,
-             batch_size = batch_size,
-             show_progress_bar = True,
-             text_embed="to left",)
-
-        
-        rendered_right = rendered_right  * 255
-        rendered_right = rendered_right.astype(np.uint8)
-        
-        rendered_example_saved_path = os.path.join(args.output_dir,"sd20_unet_for_controlnet")
-        os.makedirs(rendered_example_saved_path,exist_ok=True)
-        
-        skimage.io.imsave(os.path.join(rendered_example_saved_path,'epoch_{}_rendered_left_from_right_{}'.format(epoch,os.path.basename(input_image_path))),
-                          rendered_right
-                          )
-        
-
-def log_validation_left2right(vae,text_encoder,tokenizer,unet,args,accelerator,weight_dtype,scheduler,epoch,
-                   input_image_path =""
-                   ):
-    
-    denoise_steps = 32
-    ensemble_size = 1
-    processing_res = 768
-    match_input_res = True
-    batch_size = 1
-
-    logger.info("Running validation ... ")
-    pipeline = SimpleUNet_Pipeline_Half.from_pretrained(pretrained_model_name_or_path=args.pretrained_model_name_or_path,
-                                                   vae=accelerator.unwrap_model(vae),
-                                                   text_encoder=accelerator.unwrap_model(text_encoder),
-                                                   tokenizer=tokenizer,
-                                                   unet = accelerator.unwrap_model(unet),
-                                                   safety_checker=None,
-                                                   scheduler = accelerator.unwrap_model(scheduler),
-                                                   )
-
-    pipeline = pipeline.to(accelerator.device)
-    try:
-        pipeline.enable_xformers_memory_efficient_attention()
-    except:
-        pass  
-
-    # -------------------- Inference and saving --------------------
-    with torch.no_grad():
-        
-        input_image_pil_left = Image.open(input_image_path)
-        rendered_right = pipeline(input_image_pil_left,
-             denosing_steps=denoise_steps,
-             ensemble_size= ensemble_size,
-             processing_res = processing_res,
-             match_input_res = match_input_res,
-             batch_size = batch_size,
-             show_progress_bar = True,
-             text_embed="to right",)
-
-        rendered_right = rendered_right  * 255
-        rendered_right = rendered_right.astype(np.uint8)
-        
-        rendered_example_saved_path = os.path.join(args.output_dir,"sd20_unet_for_controlnet")
-        os.makedirs(rendered_example_saved_path,exist_ok=True)
-        
-        skimage.io.imsave(os.path.join(rendered_example_saved_path,'epoch_{}_rendered_right_from_left_{}'.format(epoch,os.path.basename(input_image_path))),
-                          rendered_right)
-        
-        
 def parse_args():
     parser = argparse.ArgumentParser(description="Kitti Multi-Baseline Images")
     
@@ -425,6 +319,58 @@ def parse_args():
     return args
 
 
+
+
+def log_validation_left2right(vae,text_encoder,tokenizer,unet,args,accelerator,weight_dtype,scheduler,epoch,
+                   input_image_path =""
+                   ):
+    
+    denoise_steps = 32
+    ensemble_size = 1
+    processing_res = 768
+    match_input_res = True
+    batch_size = 1
+
+    logger.info("Running validation ... ")
+    pipeline = SimpleUNet_Pipeline_Half.from_pretrained(pretrained_model_name_or_path=args.pretrained_model_name_or_path,
+                                                   vae=accelerator.unwrap_model(vae),
+                                                   text_encoder=accelerator.unwrap_model(text_encoder),
+                                                   tokenizer=tokenizer,
+                                                   unet = accelerator.unwrap_model(unet),
+                                                   safety_checker=None,
+                                                   scheduler = accelerator.unwrap_model(scheduler),
+                                                   )
+
+    pipeline = pipeline.to(accelerator.device)
+    try:
+        pipeline.enable_xformers_memory_efficient_attention()
+    except:
+        pass  
+
+    # -------------------- Inference and saving --------------------
+    with torch.no_grad():
+        
+        input_image_pil_left = Image.open(input_image_path)
+        rendered_right = pipeline(input_image_pil_left,
+             denosing_steps=denoise_steps,
+             ensemble_size= ensemble_size,
+             processing_res = processing_res,
+             match_input_res = match_input_res,
+             batch_size = batch_size,
+             show_progress_bar = True,
+             text_embed="to right",)
+
+        rendered_right = rendered_right  * 255
+        rendered_right = rendered_right.astype(np.uint8)
+        
+        rendered_example_saved_path = os.path.join(args.output_dir,"Simple_Diffusion")
+        os.makedirs(rendered_example_saved_path,exist_ok=True)
+        
+        skimage.io.imsave(os.path.join(rendered_example_saved_path,
+                        'epoch_{}_rendered_right_from_left_{}'.format(epoch,os.path.basename(input_image_path))),
+                          rendered_right)
+
+
 def main():
     
     ''' ------------------------Configs Preparation----------------------------'''
@@ -681,19 +627,6 @@ def main():
 
     if accelerator.is_main_process:
         unet.eval()
-        log_validation_right2left(
-            vae=vae,
-            text_encoder=text_encoder,
-            tokenizer=tokenizer,
-            unet=unet,
-            args=args,
-            accelerator=accelerator,
-            weight_dtype=weight_dtype,
-            scheduler=noise_scheduler,
-            epoch=0,
-            input_image_path=args.input_image_example_path
-            
-            )
         log_validation_left2right(
             vae=vae,
             text_encoder=text_encoder,
@@ -706,6 +639,7 @@ def main():
             epoch=0,
             input_image_path=args.input_image_example_path
             )
+
 
     # using the epochs to training the model
     for epoch in range(first_epoch, args.num_train_epochs):
@@ -743,10 +677,6 @@ def main():
 
                 disp_latents = recovered_contents
                 rgb_latents = rgb_prompt
-
-                
-                # # print(disp_latents.shape)
-                # logger.info(disp_latents.shape)
                 
                 # Sample noise that we'll add to the latents
                 noise = torch.randn_like(disp_latents) # create noise
@@ -847,19 +777,7 @@ def main():
                             epoch=epoch,
                             input_image_path=args.input_image_example_path
                         )
-                        log_validation_right2left(
-                            vae=vae,
-                            text_encoder=text_encoder,
-                            tokenizer=tokenizer,
-                            unet=unet,
-                            args=args,
-                            accelerator=accelerator,
-                            weight_dtype=weight_dtype,
-                            scheduler=noise_scheduler,
-                            epoch=epoch,
-                            input_image_path=args.input_image_example_path
-                        )
-                
+
                 # saving the checkpoints
                 if global_step % args.checkpointing_steps == 0:
                     if accelerator.is_main_process:
@@ -894,19 +812,7 @@ def main():
         
     
         if accelerator.is_main_process:
-                
-            # validation inference here
-            log_validation_right2left(
-                vae=vae,
-                text_encoder=text_encoder,
-                tokenizer=tokenizer,
-                unet=unet,
-                args=args,
-                accelerator=accelerator,
-                weight_dtype=weight_dtype,
-                scheduler=noise_scheduler,
-                epoch=epoch 
-            )
+
             log_validation_left2right(
                 vae=vae,
                 text_encoder=text_encoder,
@@ -924,6 +830,10 @@ def main():
     # Create the pipeline for training and savet
     accelerator.wait_for_everyone()
     accelerator.end_training()
+
+if __name__=="__main__":
+    main()
+
 
 if __name__=="__main__":
     main()
