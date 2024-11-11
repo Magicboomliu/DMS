@@ -247,7 +247,7 @@ def parse_args():
     parser.add_argument(
         "--checkpointing_steps",
         type=int,
-        default=5000,
+        default=200,
         help=(
             "Save a checkpoint of the training state every X updates. These checkpoints are only suitable for resuming"
             " training using `--resume_from_checkpoint`."
@@ -322,7 +322,7 @@ def parse_args():
 
 
 def log_validation_left2right(vae,text_encoder,tokenizer,unet,args,accelerator,weight_dtype,scheduler,epoch,
-                   input_image_path =""
+                   input_image_path ="/home/zliu/CVPR2025/DiffusionMultiBaseline/simple_input_images/left_image.png"
                    ):
     
     denoise_steps = 32
@@ -363,12 +363,63 @@ def log_validation_left2right(vae,text_encoder,tokenizer,unet,args,accelerator,w
         rendered_right = rendered_right  * 255
         rendered_right = rendered_right.astype(np.uint8)
         
-        rendered_example_saved_path = os.path.join(args.output_dir,"Simple_Diffusion")
+        rendered_example_saved_path = os.path.join(args.output_dir,"Simple_DiffusionV2")
         os.makedirs(rendered_example_saved_path,exist_ok=True)
         
         skimage.io.imsave(os.path.join(rendered_example_saved_path,
                         'epoch_{}_rendered_right_from_left_{}'.format(epoch,os.path.basename(input_image_path))),
                           rendered_right)
+
+
+def log_validation_right2left(vae,text_encoder,tokenizer,unet,args,accelerator,weight_dtype,scheduler,epoch,
+                   input_image_path ="/home/zliu/CVPR2025/DiffusionMultiBaseline/simple_input_images/right_image.png"
+                   ):
+    
+    denoise_steps = 32
+    ensemble_size = 1
+    processing_res = 768
+    match_input_res = True
+    batch_size = 1
+
+    logger.info("Running validation ... ")
+    pipeline = SimpleUNet_Pipeline_Half.from_pretrained(pretrained_model_name_or_path=args.pretrained_model_name_or_path,
+                                                   vae=accelerator.unwrap_model(vae),
+                                                   text_encoder=accelerator.unwrap_model(text_encoder),
+                                                   tokenizer=tokenizer,
+                                                   unet = accelerator.unwrap_model(unet),
+                                                   safety_checker=None,
+                                                   scheduler = accelerator.unwrap_model(scheduler),
+                                                   )
+
+    pipeline = pipeline.to(accelerator.device)
+    try:
+        pipeline.enable_xformers_memory_efficient_attention()
+    except:
+        pass  
+
+    # -------------------- Inference and saving --------------------
+    with torch.no_grad():
+        
+        input_image_pil_left = Image.open(input_image_path)
+        rendered_right = pipeline(input_image_pil_left,
+             denosing_steps=denoise_steps,
+             ensemble_size= ensemble_size,
+             processing_res = processing_res,
+             match_input_res = match_input_res,
+             batch_size = batch_size,
+             show_progress_bar = True,
+             text_embed="to left",)
+
+        rendered_right = rendered_right  * 255
+        rendered_right = rendered_right.astype(np.uint8)
+        
+        rendered_example_saved_path = os.path.join(args.output_dir,"Simple_DiffusionV2")
+        os.makedirs(rendered_example_saved_path,exist_ok=True)
+        
+        skimage.io.imsave(os.path.join(rendered_example_saved_path,
+                        'epoch_{}_rendered_left_from_right_{}'.format(epoch,os.path.basename(input_image_path))),
+                          rendered_right)
+
 
 
 def main():
@@ -640,6 +691,16 @@ def main():
             input_image_path=args.input_image_example_path
             )
 
+        log_validation_right2left(vae=vae,
+            text_encoder=text_encoder,
+            tokenizer=tokenizer,
+            unet=unet,
+            args=args,
+            accelerator=accelerator,
+            weight_dtype=weight_dtype,
+            scheduler=noise_scheduler,
+            epoch=0,)
+
 
     # using the epochs to training the model
     for epoch in range(first_epoch, args.num_train_epochs):
@@ -778,6 +839,17 @@ def main():
                             input_image_path=args.input_image_example_path
                         )
 
+
+                        log_validation_right2left(vae=vae,
+                            text_encoder=text_encoder,
+                            tokenizer=tokenizer,
+                            unet=unet,
+                            args=args,
+                            accelerator=accelerator,
+                            weight_dtype=weight_dtype,
+                            scheduler=noise_scheduler,
+                            epoch=epoch)
+
                 # saving the checkpoints
                 if global_step % args.checkpointing_steps == 0:
                     if accelerator.is_main_process:
@@ -824,6 +896,16 @@ def main():
                 scheduler=noise_scheduler,
                 epoch=epoch 
             )
+
+            log_validation_right2left(vae=vae,
+                text_encoder=text_encoder,
+                tokenizer=tokenizer,
+                unet=unet,
+                args=args,
+                accelerator=accelerator,
+                weight_dtype=weight_dtype,
+                scheduler=noise_scheduler,
+                epoch=epoch)
             
 
             
@@ -834,6 +916,3 @@ def main():
 if __name__=="__main__":
     main()
 
-
-if __name__=="__main__":
-    main()

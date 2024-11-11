@@ -25,8 +25,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-
-class SimpleUNet_Pipeline_Half(DiffusionPipeline):
+class SimpleUNet_Pipeline_UpScale(DiffusionPipeline):
     # two hyper-parameters
     rgb_latent_scale_factor = 0.18215
     depth_latent_scale_factor = 0.18215
@@ -81,6 +80,7 @@ class SimpleUNet_Pipeline_Half(DiffusionPipeline):
                  batch_size:int =0,
                  show_progress_bar:bool = True,
                  text_embed="to right",
+                 upscale_factor=2.0
                  ):
         
         # inherit from thea Diffusion Pipeline
@@ -115,7 +115,7 @@ class SimpleUNet_Pipeline_Half(DiffusionPipeline):
         rgb_norm = rgb / 255.0
         rgb_norm = torch.from_numpy(rgb_norm).to(self.dtype)
         rgb_norm = rgb_norm.to(device)
-        rgb_norm = rgb_norm.half()
+        # rgb_norm = rgb_norm.half()
         
         assert rgb_norm.min() >= 0.0 and rgb_norm.max() <= 1.0
         rgb_norm = (rgb_norm -0.5) * 2.0
@@ -143,6 +143,13 @@ class SimpleUNet_Pipeline_Half(DiffusionPipeline):
         
         for batch in iterable_bar:
             (batched_image,)= batch  # here the image is still around 0-1
+
+
+            if upscale_factor>1:
+                batched_image = F.interpolate(batched_image,scale_factor=upscale_factor,mode='bilinear',align_corners=False)
+
+
+
             depth_pred_raw_left  = self.single_infer(
                 input_rgb=batched_image,
                 num_inference_steps=denosing_steps,
@@ -154,9 +161,17 @@ class SimpleUNet_Pipeline_Half(DiffusionPipeline):
         depth_pred_left = depth_pred_raw_left.squeeze(0).permute(1,2,0).cpu().numpy().astype(np.float32)
  
         
+        # # Resize back to original resolution
+        # if match_input_res:
+        #     depth_pred_left = depth_pred_left[:origianl_size[0],:origianl_size[1]]
+            
+
         # Resize back to original resolution
         if match_input_res:
+            if upscale_factor>1:
+                depth_pred_left = cv2.resize(depth_pred_left,(960,540))
             depth_pred_left = depth_pred_left[:origianl_size[0],:origianl_size[1]]
+            
 
         # Clip output range: current size is the original size
         depth_pred_left = depth_pred_left.clip(0, 1)
@@ -179,8 +194,10 @@ class SimpleUNet_Pipeline_Half(DiffusionPipeline):
         )
         text_input_ids = text_inputs.input_ids.to(self.text_encoder.device) #[1,2]
         # print(text_input_ids.shape)
-        self.empty_text_embed = self.text_encoder(text_input_ids)[0].to(self.dtype) #[1,2,1024]
-        self.empty_text_embed = self.empty_text_embed.half()
+        empty_text_embed = self.text_encoder(text_input_ids)[0].to(self.dtype) #[1,2,1024]
+        # self.empty_text_embed = self.empty_text_embed.half()
+        
+        return  empty_text_embed
 
         
     @torch.no_grad()
@@ -204,16 +221,17 @@ class SimpleUNet_Pipeline_Half(DiffusionPipeline):
             rgb_latent.shape, device=device, dtype=self.dtype
         )  # [B, 4, H/8, W/8]
         
-        depth_latent = depth_latent.half()
+        # depth_latent = depth_latent.half()
         
         prompts = rgb_latent
+        
+        
+        empty_text_embed = self.__encode_contents_text(text_embed)
     
+        # self.__encode_contents_text(text_embed)
     
-        # Batched empty text embedding
-        if self.empty_text_embed is None:
-            self.__encode_contents_text(text_embed)
             
-        batch_empty_text_embed = self.empty_text_embed.repeat(
+        batch_empty_text_embed = empty_text_embed.repeat(
             (rgb_latent.shape[0], 1, 1)
         )  # [B, 2, 1024]    
 
@@ -292,7 +310,7 @@ class SimpleUNet_Pipeline_Half(DiffusionPipeline):
         # scale latent
         depth_latent = depth_latent / self.depth_latent_scale_factor
         
-        depth_latent = depth_latent.half()
+        # depth_latent = depth_latent.half()
         
         # decode
         z = self.vae.post_quant_conv(depth_latent)

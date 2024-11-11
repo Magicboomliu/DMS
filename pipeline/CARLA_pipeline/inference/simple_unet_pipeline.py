@@ -26,7 +26,7 @@ import torch.nn.functional as F
 
 
 
-class SimpleUNet_Pipeline_Half(DiffusionPipeline):
+class SimpleUNet_Pipeline(DiffusionPipeline):
     # two hyper-parameters
     rgb_latent_scale_factor = 0.18215
     depth_latent_scale_factor = 0.18215
@@ -115,7 +115,7 @@ class SimpleUNet_Pipeline_Half(DiffusionPipeline):
         rgb_norm = rgb / 255.0
         rgb_norm = torch.from_numpy(rgb_norm).to(self.dtype)
         rgb_norm = rgb_norm.to(device)
-        rgb_norm = rgb_norm.half()
+        # rgb_norm = rgb_norm.half()
         
         assert rgb_norm.min() >= 0.0 and rgb_norm.max() <= 1.0
         rgb_norm = (rgb_norm -0.5) * 2.0
@@ -179,8 +179,10 @@ class SimpleUNet_Pipeline_Half(DiffusionPipeline):
         )
         text_input_ids = text_inputs.input_ids.to(self.text_encoder.device) #[1,2]
         # print(text_input_ids.shape)
-        self.empty_text_embed = self.text_encoder(text_input_ids)[0].to(self.dtype) #[1,2,1024]
-        self.empty_text_embed = self.empty_text_embed.half()
+        empty_text_embed = self.text_encoder(text_input_ids)[0].to(self.dtype) #[1,2,1024]
+        # self.empty_text_embed = self.empty_text_embed.half()
+        
+        return  empty_text_embed
 
         
     @torch.no_grad()
@@ -204,16 +206,17 @@ class SimpleUNet_Pipeline_Half(DiffusionPipeline):
             rgb_latent.shape, device=device, dtype=self.dtype
         )  # [B, 4, H/8, W/8]
         
-        depth_latent = depth_latent.half()
+        # depth_latent = depth_latent.half()
         
         prompts = rgb_latent
+        
+        
+        empty_text_embed = self.__encode_contents_text(text_embed)
     
+        # self.__encode_contents_text(text_embed)
     
-        # Batched empty text embedding
-        if self.empty_text_embed is None:
-            self.__encode_contents_text(text_embed)
             
-        batch_empty_text_embed = self.empty_text_embed.repeat(
+        batch_empty_text_embed = empty_text_embed.repeat(
             (rgb_latent.shape[0], 1, 1)
         )  # [B, 2, 1024]    
 
@@ -292,7 +295,7 @@ class SimpleUNet_Pipeline_Half(DiffusionPipeline):
         # scale latent
         depth_latent = depth_latent / self.depth_latent_scale_factor
         
-        depth_latent = depth_latent.half()
+        # depth_latent = depth_latent.half()
         
         # decode
         z = self.vae.post_quant_conv(depth_latent)

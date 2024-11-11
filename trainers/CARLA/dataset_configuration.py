@@ -21,7 +21,7 @@ def prepare_dataset(datapath,
                     batch_size = 1,
                     test_size =1,
                     datathread =4,
-                    targetHW=(1920,1080)):
+                    targetHW=(960,540)):
 
     train_transform_list = [transforms.ToTensor(),]
     train_transform = transforms.Compose(train_transform_list)
@@ -93,7 +93,7 @@ if __name__=="__main__":
                                                                        vallist=vallist,
                                                                        logger=None,
                                                                        batch_size=1,test_size=1,
-                                                                       targetHW=(1920,1080),
+                                                                       targetHW=(960,540),
                                                                        datathread=4)
     
     # train dataloader

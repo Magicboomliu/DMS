@@ -13,3 +13,4 @@ logs
 *.zip
 *.tar
 playground
+output_validation

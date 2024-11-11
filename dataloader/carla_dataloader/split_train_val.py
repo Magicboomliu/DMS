@@ -5,8 +5,8 @@ import numpy as np
 
 if __name__ =="__main__":
     
-    root_folder = "/media/zliu/data12/dataset/CARLA/"
-    output_filename_list = "/home/zliu/CVPR25_Detection/DiffusionMultiBaseline/datafiles/CARLA"
+    root_folder = "/data3/CARLA_V2/"
+    output_filename_list = "/home/zliu/CVPR2025/DiffusionMultiBaseline/datafiles/CARLA15"
     os.makedirs(output_filename_list,exist_ok=True)
     
     
