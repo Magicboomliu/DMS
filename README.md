@@ -1,4 +1,4 @@
-# DMB: Improving Self-supervised Stereo Matching using Diffusion-Based Multi-Baseline Generation.
+# DMS: Diffusion-Based Multi-Baseline Stereo Generation for Improving Self-Supervised Depth Estimation
 
 ![extented_view_on_kitti](./figures/teaser02.png)
 
