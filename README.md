@@ -178,12 +178,8 @@ If you find this work helpful, please cite:
   author    = {Liu, Zihua and {co-authors}},
   booktitle = {ICCV Workshops (AIM)},
   year      = {2025},
-  note      = {Oral},
-  url       = {http://www.ok.sc.e.titech.ac.jp/res/DMS/}
 }
 ```
-
-*(Replace with your final author list and add the arXiv/DOI once available.)*
 
 ---
 
